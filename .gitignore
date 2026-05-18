@@ -18,3 +18,5 @@ http-client.private.env.json
 
 docker-compose-*.yaml
 docker-compose-*.yml
+
+.worktrees/
