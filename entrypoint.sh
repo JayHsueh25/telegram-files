@@ -41,9 +41,9 @@ start_services() {
 
     echo "Starting Java service..."
     if [ -n "$cmd_prefix" ]; then
-        $cmd_prefix java -jar -Djava.library.path=/app/tdlib /app/api.jar &
+        $cmd_prefix java --enable-preview -jar -Djava.library.path=/app/tdlib /app/api.jar &
     else
-        java -jar -Djava.library.path=/app/tdlib /app/api.jar &
+        java --enable-preview -jar -Djava.library.path=/app/tdlib /app/api.jar &
     fi
     JAVA_PID=$!
 

@@ -58,7 +58,7 @@ RUN addgroup -S tf && \
     rm -rf /tmp/* /var/tmp/* && \
     touch /run/nginx.pid && \
     chown -R tf:tf /app /etc/nginx /var/lib/nginx /var/log/nginx /run/nginx.pid && \
-    printf '#!/bin/sh\njava -Djava.library.path=/app/tdlib -cp /app/api.jar telegram.files.Maintain "$@"\n' > /usr/bin/tfm && \
+    printf '#!/bin/sh\njava --enable-preview -Djava.library.path=/app/tdlib -cp /app/api.jar telegram.files.Maintain "$@"\n' > /usr/bin/tfm && \
     chmod +x /usr/bin/tfm
 
 COPY --from=runtime-builder --chown=tf:tf /custom-jre/jre /jre
