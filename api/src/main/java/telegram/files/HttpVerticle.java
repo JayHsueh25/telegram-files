@@ -53,11 +53,14 @@ public class HttpVerticle extends AbstractVerticle {
 
     private final FileRouteHandler fileRouteHandler = new FileRouteHandler();
 
+    private final AdminAuthService adminAuthService = new AdminAuthService();
+
     private static final String SESSION_COOKIE_NAME = "tf";
 
     @Override
     public void start(Promise<Void> startPromise) {
-        initHttpServer()
+        adminAuthService.ensureInitialized()
+                .compose(_ -> initHttpServer())
                 .compose(_ -> initTelegramVerticles())
                 .compose(_ -> AutomationsHolder.INSTANCE.init())
                 .compose(_ -> initAutoDownloadVerticle())
@@ -100,14 +103,16 @@ public class HttpVerticle extends AbstractVerticle {
 
         SessionStore sessionStore = LocalSessionStore.create(vertx, SESSION_COOKIE_NAME);
         SessionHandler sessionHandler = SessionHandler.create(sessionStore)
-                .setSessionCookieName(SESSION_COOKIE_NAME);
+                .setSessionCookieName(SESSION_COOKIE_NAME)
+                .setSessionCookiePath("/");
         if (Config.isProd()) {
             sessionHandler
-                    .setCookieSameSite(CookieSameSite.STRICT);
+                    .setCookieSameSite(CookieSameSite.STRICT)
+                    .setCookieSecureFlag(true);
         } else {
             sessionHandler
-                    .setCookieSameSite(CookieSameSite.NONE)
-                    .setCookieSecureFlag(true);
+                    .setCookieSameSite(CookieSameSite.LAX)
+                    .setCookieSecureFlag(false);
         }
         router.route()
                 .handler(sessionHandler)
@@ -131,12 +136,18 @@ public class HttpVerticle extends AbstractVerticle {
                     );
         }
 
+        router.route().handler(this::handleAdminAuthGuard);
+
         HealthChecks hc = HealthChecks.create(vertx);
         hc.register("http-server", Promise::complete);
 
         router.get("/").handler(ctx -> ctx.response().end("Hello World!"));
         router.get("/health").handler(HealthCheckHandler.createWithHealthChecks(hc));
         router.get("/version").handler(ctx -> ctx.json(new JsonObject().put("version", Start.VERSION)));
+        router.post("/auth/login").handler(this::handleAdminLogin);
+        router.post("/auth/logout").handler(this::handleAdminLogout);
+        router.get("/auth/session").handler(this::handleAdminSession);
+        router.post("/auth/credentials").handler(this::handleAdminCredentialsUpdate);
         router.route("/ws").handler(this::handleWebSocket);
 
         router.get("/settings").handler(this::handleSettings);
@@ -251,6 +262,29 @@ public class HttpVerticle extends AbstractVerticle {
         return Future.succeededFuture();
     }
 
+    private void handleAdminAuthGuard(RoutingContext ctx) {
+        if (ctx.request().method() == HttpMethod.OPTIONS) {
+            ctx.next();
+            return;
+        }
+
+        String path = ctx.request().path();
+        if (Set.of("/", "/health", "/version", "/auth/login", "/auth/session").contains(path)) {
+            ctx.next();
+            return;
+        }
+
+        if (adminAuthService.isAuthenticated(ctx.session())) {
+            ctx.next();
+            return;
+        }
+
+        ctx.response()
+                .setStatusCode(401)
+                .putHeader("Content-Type", "application/json")
+                .end(JsonObject.of("error", "Unauthorized").encode());
+    }
+
     private void handleWebSocket(RoutingContext ctx) {
         String sessionId = ctx.session().id();
         String telegramId = ctx.request().getParam("telegramId");
@@ -285,6 +319,65 @@ public class HttpVerticle extends AbstractVerticle {
                     ws.textMessageHandler(text -> log.debug("Received WebSocket message: " + text));
                 })
                 .onFailure(err -> log.warn("Failed to upgrade to WebSocket: %s".formatted(err.getMessage())));
+    }
+
+    private void handleAdminLogin(RoutingContext ctx) {
+        JsonObject body = ctx.body().asJsonObject();
+        String username = body == null ? null : body.getString("username");
+        String password = body == null ? null : body.getString("password");
+
+        if (StrUtil.isBlank(username) || StrUtil.isBlank(password)) {
+            ctx.response()
+                    .setStatusCode(400)
+                    .putHeader("Content-Type", "application/json")
+                    .end(JsonObject.of("error", "Username and password are required").encode());
+            return;
+        }
+
+        String normalizedUsername = StrUtil.trim(username);
+        adminAuthService.verifyCredentials(normalizedUsername, password)
+                .onSuccess(matches -> {
+                    if (!matches) {
+                        ctx.response()
+                                .setStatusCode(401)
+                                .putHeader("Content-Type", "application/json")
+                                .end(JsonObject.of("error", "Invalid username or password").encode());
+                        return;
+                    }
+
+                    ctx.session().regenerateId();
+                    adminAuthService.markAuthenticated(ctx.session(), normalizedUsername);
+                    ctx.json(JsonObject.of("authenticated", true, "username", normalizedUsername));
+                })
+                .onFailure(ctx::fail);
+    }
+
+    private void handleAdminLogout(RoutingContext ctx) {
+        adminAuthService.clearAuthenticated(ctx.session());
+        ctx.end();
+    }
+
+    private void handleAdminSession(RoutingContext ctx) {
+        boolean authenticated = adminAuthService.isAuthenticated(ctx.session());
+        String username = authenticated ? ctx.session().get(AdminAuthService.SESSION_USERNAME) : null;
+        ctx.json(JsonObject.of("authenticated", authenticated, "username", username));
+    }
+
+    private void handleAdminCredentialsUpdate(RoutingContext ctx) {
+        JsonObject body = ctx.body().asJsonObject();
+        String username = body == null ? null : body.getString("username");
+        String password = body == null ? null : body.getString("password");
+
+        adminAuthService.updateCredentials(username, password)
+                .onSuccess(_ -> {
+                    String normalizedUsername = StrUtil.trim(username);
+                    adminAuthService.markAuthenticated(ctx.session(), normalizedUsername);
+                    ctx.json(JsonObject.of("authenticated", true, "username", normalizedUsername));
+                })
+                .onFailure(err -> ctx.response()
+                        .setStatusCode(400)
+                        .putHeader("Content-Type", "application/json")
+                        .end(JsonObject.of("error", err.getMessage()).encode()));
     }
 
     private void handleSettingsCreate(RoutingContext ctx) {

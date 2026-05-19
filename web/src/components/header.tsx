@@ -6,6 +6,7 @@ import {
   Download,
   Ellipsis,
   Home,
+  LogOut,
   UnplugIcon,
 } from "lucide-react";
 import { TooltipWrapper } from "./ui/tooltip";
@@ -25,11 +26,13 @@ import ThemeToggleButton from "@/components/theme-toggle-button";
 import AccountSelect from "@/components/account-select";
 import { useSearchParams } from "next/navigation";
 import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/hooks/use-auth";
 
 export function Header() {
   const useTelegramAccountProps = useTelegramAccount();
   const { connectionStatus, accountDownloadSpeed } = useWebsocket();
   const { settings } = useSettings();
+  const { logout, username } = useAuth();
   const isMobile = useIsMobile();
   const [showMore, setShowMore] = useState(false);
   const searchParams = useSearchParams();
@@ -87,6 +90,19 @@ export function Header() {
             )}
 
             <ThemeToggleButton />
+
+            <TooltipWrapper
+              content={username ? `Signed in as ${username}` : "Logout"}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => void logout()}
+                aria-label="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </TooltipWrapper>
 
             <SettingsDialog />
           </div>

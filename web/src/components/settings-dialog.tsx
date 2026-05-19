@@ -18,6 +18,7 @@ import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasi
 import { LayoutPanelTopIcon } from "@/components/ui/layout-panel-top";
 import FilePhaseStatistics from "@/components/file-phase-statistics";
 import DebugTelegramMethod from "@/components/debug-telegram-method";
+import { SecuritySettingsForm } from "@/components/security-settings-form";
 
 export const SettingsDialog: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -49,6 +50,7 @@ export const SettingsDialog: React.FC = () => {
         >
           <TabsList className="min-h-9 justify-start overflow-auto">
             <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
             <TabsTrigger value="proxys">Proxys</TabsTrigger>
             <TabsTrigger value="api">API</TabsTrigger>
@@ -56,6 +58,11 @@ export const SettingsDialog: React.FC = () => {
           </TabsList>
           <TabsContent value="general" className="overflow-hidden">
             <SettingsForm />
+          </TabsContent>
+          <TabsContent value="security" className="h-full overflow-hidden">
+            <div className="no-scrollbar flex h-full flex-col overflow-y-scroll">
+              <SecuritySettingsForm />
+            </div>
           </TabsContent>
           <TabsContent value="statistics" className="h-full overflow-hidden">
             <div className="no-scrollbar flex h-full flex-col overflow-y-scroll">

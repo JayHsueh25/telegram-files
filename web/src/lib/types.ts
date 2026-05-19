@@ -135,6 +135,16 @@ export type TelegramApiResult = {
   code: string;
 };
 
+export type AuthSession = {
+  authenticated: boolean;
+  username?: string | null;
+};
+
+export type AdminCredentialsInput = {
+  username: string;
+  password: string;
+};
+
 export const SettingKeys = [
   "uniqueOnly",
   "imageLoadSize",

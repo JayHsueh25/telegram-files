@@ -1,5 +1,7 @@
 import { env } from "@/env";
 
+let unauthorizedHandler: (() => void) | null = null;
+
 export function getApiUrl(): string {
   const url = env.NEXT_PUBLIC_API_URL;
   if (url.startsWith("http")) {
@@ -22,6 +24,17 @@ export function getWsUrl(): string {
   return `${window.location.protocol === "https:" ? "wss" : "ws"}://${
     window.location.host
   }${url}`;
+}
+
+export function registerUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
+
+export class UnauthorizedError extends Error {
+  constructor(message = "Unauthorized") {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
 }
 
 /* eslint-disable */
@@ -50,6 +63,10 @@ export async function request<T = any>(
     data = JSON.parse(responseText);
   } catch (e) {
     throw new RequestParsedError(responseText);
+  }
+  if (response.status === 401) {
+    unauthorizedHandler?.();
+    throw new UnauthorizedError(data?.error ?? "Unauthorized");
   }
   if (!response.ok) {
     throw new Error(

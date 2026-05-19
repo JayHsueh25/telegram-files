@@ -38,6 +38,7 @@
 * Instant preview of downloaded videos and images
 * Fully responsive design with mobile-friendly access, Progressive Web App (PWA) support, and offline capabilities
 * Easily fetch files from Telegram shared links
+* Built-in single administrator login with protected web access and in-app credential rotation
 
 ---
 
@@ -79,7 +80,7 @@ docker run -d \
   -e TELEGRAM_API_HASH=${TELEGRAM_API_HASH} \
   -p 6543:80 \
   -v ./data:/app/data \
-  ghcr.io/jarvis2f/telegram-files:latest
+  ${DOCKERHUB_IMAGE:-jarvis2f/telegram-files:latest}
 ```
 
 **Using `docker-compose`**
@@ -90,11 +91,30 @@ Copy [docker-compose.yaml](docker-compose.yaml) and [.env.example](.env.example)
 docker-compose up -d
 ```
 
+If your fork publishes under a different Docker Hub namespace, set `DOCKERHUB_IMAGE` in the copied `.env` file, for
+example `jayhsueh25/telegram-files:latest`.
+
+For GitHub Actions based publishing, configure these repository settings before pushing to `main`:
+
+- `Secrets.DOCKERHUB_TOKEN`: Docker Hub access token with image push permission
+- `Variables.DOCKERHUB_USERNAME`: Docker Hub namespace or username for the published image
+
+After configuration, pushes to `main`, pushes of tags matching `v*`, and manual runs of
+`.github/workflows/docker-publish.yml` from `main` or a version tag will publish a multi-architecture image to Docker
+Hub automatically.
+
 **Install on unRaid**
 
 On unRaid, install from the Community Repositories by searching for `telegram-files`.
 
 > **Important Note:** You should NOT expose the service to the public internet. Because the service is not secure.
+
+### Admin Login
+
+- The web UI is protected by a single administrator account.
+- Default credentials are `admin / admin` on first startup only.
+- Change the administrator username and password immediately after the first login from the `Security` tab.
+- The bootstrap credentials can be overridden with `ADMIN_USERNAME` and `ADMIN_PASSWORD` before the first startup.
 
 ---
 
@@ -238,7 +258,7 @@ docker run --rm \
   -e APP_ROOT=${APP_ROOT:-/app/data} \
   -e TELEGRAM_API_ID=${TELEGRAM_API_ID} \
   -e TELEGRAM_API_HASH=${TELEGRAM_API_HASH} \
-  ghcr.io/jarvis2f/telegram-files:latest ${Maintenance Command}
+  ${DOCKERHUB_IMAGE:-jarvis2f/telegram-files:latest} ${Maintenance Command}
 ```
 
 **Maintenance Command:**

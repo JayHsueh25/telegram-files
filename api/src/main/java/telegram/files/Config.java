@@ -47,6 +47,16 @@ public class Config {
 
     public static final int TELEGRAM_LOG_LEVEL = Convert.toInt(System.getenv("TELEGRAM_LOG_LEVEL"), 0);
 
+    /**
+     * Bootstrap administrator username used only when the database has not stored credentials yet.
+     */
+    public static final String ADMIN_USERNAME = StrUtil.blankToDefault(System.getenv("ADMIN_USERNAME"), "admin");
+
+    /**
+     * Bootstrap administrator password used only during the first credential initialization.
+     */
+    public static final String ADMIN_PASSWORD = StrUtil.blankToDefault(System.getenv("ADMIN_PASSWORD"), "admin");
+
     public static final String OPENAI_MODEL = StrUtil.blankToDefault(System.getenv("OPENAI_MODEL"), ChatModel.GPT_4O_MINI.asString());
 
     public static final DeploymentOptions VIRTUAL_THREAD_DEPLOYMENT_OPTIONS = new DeploymentOptions()

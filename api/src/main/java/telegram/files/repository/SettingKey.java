@@ -9,6 +9,14 @@ import java.util.function.Function;
 
 public enum SettingKey {
     version(Version::new),
+    /**
+     * Stores the single administrator username used by the web console login.
+     */
+    adminUsername,
+    /**
+     * Stores the PBKDF2 encoded password hash for the single administrator account.
+     */
+    adminPasswordHash,
     uniqueOnly(Convert::toBool, false),
     imageLoadSize,
     alwaysHide(Convert::toBool, false),
