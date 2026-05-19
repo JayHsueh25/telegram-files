@@ -2,7 +2,7 @@
 import { SWRConfig } from "swr";
 import React from "react";
 import { useToast } from "@/hooks/use-toast";
-import { request, RequestParsedError } from "@/lib/api";
+import { request, RequestParsedError, UnauthorizedError } from "@/lib/api";
 
 export const SWRProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
@@ -14,6 +14,9 @@ export const SWRProvider = ({ children }: { children: React.ReactNode }) => {
         errorRetryCount: 1,
         fetcher: request,
         onError: (err: Error, key: string) => {
+          if (err instanceof UnauthorizedError) {
+            return;
+          }
           let message;
           let isHtml = false;
           if (err instanceof RequestParsedError) {

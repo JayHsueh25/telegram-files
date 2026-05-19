@@ -4,12 +4,11 @@ import { Inter } from "next/font/google";
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { SWRProvider } from "@/components/swr-provider";
-import { SettingsProvider } from "@/hooks/use-settings";
-import { WebSocketProvider } from "@/hooks/use-websocket";
 import { env } from "@/env";
-import { TelegramAccountProvider } from "@/hooks/use-telegram-account";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LocalStorageProvider } from "@/hooks/use-local-storage";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedShell } from "@/components/protected-shell";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -56,11 +55,9 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <SWRProvider>
-              <WebSocketProvider>
-                <SettingsProvider>
-                  <TelegramAccountProvider>{children}</TelegramAccountProvider>
-                </SettingsProvider>
-              </WebSocketProvider>
+              <AuthProvider>
+                <ProtectedShell>{children}</ProtectedShell>
+              </AuthProvider>
             </SWRProvider>
             <Toaster />
           </ThemeProvider>
