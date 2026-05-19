@@ -27,7 +27,7 @@ RUN apk add --no-cache binutils && \
         --compress=2 && \
     apk del binutils
 
-FROM node:21-alpine AS web-builder
+FROM node:22-bookworm-slim AS web-builder
 
 WORKDIR /web
 
@@ -37,7 +37,7 @@ ENV NEXT_PUBLIC_API_URL=/api \
     SKIP_ENV_VALIDATION=1
 
 COPY ./web/package*.json ./
-RUN npm ci --frozen-lockfile
+RUN npm ci --no-audit --fund=false
 
 COPY ./web .
 RUN npm run build

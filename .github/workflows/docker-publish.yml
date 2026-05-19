@@ -8,6 +8,10 @@ on:
       - "v*"
   workflow_dispatch:
 
+concurrency:
+  group: docker-publish-${{ github.sha }}
+  cancel-in-progress: true
+
 env:
   DOCKERHUB_IMAGE_NAME: telegram-files
 
