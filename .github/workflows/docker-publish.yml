@@ -20,18 +20,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Validate manual ref
-        if: github.event_name == 'workflow_dispatch'
+      - name: Validate publish source
         shell: bash
         run: |
           set -euo pipefail
 
           case "${GITHUB_REF}" in
-            refs/heads/main|refs/tags/v*)
+            refs/heads/main)
+              exit 0
+              ;;
+            refs/tags/v*)
+              git fetch origin main --force
+              tag_commit="$(git rev-list -n 1 "${GITHUB_REF}")"
+              main_commit="$(git rev-parse origin/main)"
+
+              if ! git merge-base --is-ancestor "${tag_commit}" "${main_commit}"; then
+                echo "::error title=Tag is not on main::Version tags can only publish when their commit is already contained in origin/main."
+                exit 1
+              fi
               ;;
             *)
-              echo "::error title=Unsupported manual ref::Run this workflow from main or a version tag."
+              echo "::error title=Unsupported publish ref::Run this workflow from main or use a version tag that points to a commit already contained in origin/main."
               exit 1
               ;;
           esac
