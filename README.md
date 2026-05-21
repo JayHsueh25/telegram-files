@@ -91,6 +91,41 @@ Copy [docker-compose.yaml](docker-compose.yaml) and [.env.example](.env.example)
 docker-compose up -d
 ```
 
+### 配置说明
+
+部署时建议先复制 [.env.example](.env.example) 为 `.env`，按需修改配置后再执行 `docker-compose up -d`。
+下面是常用配置项说明，详细解释见表格下方。
+
+| 配置项 | 是否必填 | 示例 | 中文说明 |
+| --- | --- | --- | --- |
+| `TELEGRAM_API_ID` | 是 | `123456` | Telegram API ID，从 [Telegram API](https://my.telegram.org/apps) 申请。 |
+| `TELEGRAM_API_HASH` | 是 | `abcdef123456` | Telegram API HASH，和 API ID 配套使用。 |
+| `APP_ENV` | 否 | `prod` | 应用运行环境，Docker 部署保持 `prod`。 |
+| `APP_ROOT` | 否 | `/app/data` | 容器内数据目录，默认映射到宿主机 `./data`。 |
+| `ADMIN_USERNAME` | 否 | `admin` | 首次初始化管理员账号，数据库已有管理员凭据后不再覆盖。 |
+| `ADMIN_PASSWORD` | 否 | `admin` | 首次初始化管理员密码，生产环境请在首次启动前修改。 |
+| `DOCKERHUB_IMAGE` | 否 | `jayhsueh25/telegram-files:latest` | 使用自己 fork 发布的 Docker Hub 镜像时填写。 |
+| `PUID` / `PGID` | 否 | `1000` | 指定容器内运行用户，常用于解决挂载目录权限问题。 |
+| `NGINX_PORT` | 否 | `80` | 容器内 Nginx 监听端口，通常不需要改。 |
+| `DB_TYPE` | 否 | `postgres` | 默认使用 SQLite；需要外部数据库时填写 `postgres` 或 `mysql`。 |
+| `DB_HOST` / `DB_PORT` | 否 | `localhost` / `5432` | 外部数据库地址和端口，仅使用 PostgreSQL/MySQL 时需要。 |
+| `DB_USER` / `DB_PASSWORD` | 否 | `postgres` / `postgres` | 外部数据库账号密码，仅使用 PostgreSQL/MySQL 时需要。 |
+| `DB_NAME` | 否 | `telegram-files` | 外部数据库名称，仅使用 PostgreSQL/MySQL 时需要。 |
+| `TELEGRAM_LOG_LEVEL` | 否 | `0` | TDLib 日志级别，数字越大日志越详细。 |
+| `OPENAI_API_KEY` | 否 | `sk-...` | OpenAI API Key，仅使用 AI 相关能力时填写。 |
+| `OPENAI_MODEL` | 否 | `gpt-4o-mini` | OpenAI 模型名称，留空使用默认值。 |
+| `OPENAI_BASE_URL` | 否 | `https://api.openai.com/v1` | OpenAI API 地址，使用兼容服务时再修改。 |
+
+配置项解释：
+
+- `TELEGRAM_API_ID` 和 `TELEGRAM_API_HASH` 是启动服务的必填项，没有这两个值服务会启动失败。
+- `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 只在首次初始化时生效。登录后请在右上角“账号安全”里修改账号和密码。
+- 默认数据库是 SQLite，数据会存放在 `APP_ROOT` 下；普通个人部署不需要配置 PostgreSQL 或 MySQL。
+- `DOCKERHUB_IMAGE` 用于切换镜像来源。如果你的 fork 发布到了自己的 Docker Hub 命名空间，就把它改成自己的镜像名。
+- `PUID` / `PGID` 主要用于 Linux、NAS、unRaid 等环境，避免容器写入 `./data` 后宿主机用户无法读写。
+- `NGINX_PORT` 是容器内部端口。一般保持 `80`，对外访问端口改 `docker-compose.yaml` 里的 `ports` 左侧，例如 `6543:80`。
+- OpenAI 相关配置可以全部留空，只有使用 AI 转存、AI 分类等能力时才需要填写。
+
 If your fork publishes under a different Docker Hub namespace, set `DOCKERHUB_IMAGE` in the copied `.env` file, for
 example `jayhsueh25/telegram-files:latest`.
 
@@ -113,7 +148,7 @@ On unRaid, install from the Community Repositories by searching for `telegram-fi
 
 - The web UI is protected by a single administrator account.
 - Default credentials are `admin / admin` on first startup only.
-- Change the administrator username and password immediately after the first login from the `Security` tab.
+- Change the administrator username and password immediately after the first login from the top-right `账号安全` entry.
 - The bootstrap credentials can be overridden with `ADMIN_USERNAME` and `ADMIN_PASSWORD` before the first startup.
 
 ---

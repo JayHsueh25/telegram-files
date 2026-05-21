@@ -3,7 +3,7 @@ services:
     container_name: telegram-files
     image: ${DOCKERHUB_IMAGE:-jarvis2f/telegram-files:latest}
     restart: always
-    # Uncomment the following lines to enable health check for the service.
+    # 如果你启用了下面的 PostgreSQL 或 MySQL 服务，可以取消 depends_on 注释，让主服务等待数据库健康后再启动。
     #    depends_on:
     #      telegram-files-postgres:
     #        condition: service_healthy
@@ -16,28 +16,46 @@ services:
       timeout: 10s
       start_period: 10s
     environment:
-      # PUID and PGID are the user id and group id of the user who owns the files in the mounted volume.
-      #PUID: 1000
-      #PGID: 1000
-      #NGINX_PORT: 80
-      APP_ENV: "prod"
-      APP_ROOT: "/app/data"
+      # LOG_LEVEL：应用日志级别。正常使用建议 INFO，排查问题时可改为 FINE 或 FINER。
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # PUID / PGID：指定容器内进程使用的用户 ID 和用户组 ID，用于解决挂载目录权限问题。
+      PUID: ${PUID:-0}
+      PGID: ${PGID:-0}
+      # NGINX_PORT：容器内部 Nginx 监听端口。通常保持 80，宿主机访问端口在下面 ports 中配置。
+      NGINX_PORT: ${NGINX_PORT:-80}
+      # APP_ENV：运行环境。Docker 部署保持 prod。
+      APP_ENV: ${APP_ENV:-prod}
+      # APP_ROOT：容器内数据目录。下面 volumes 默认把宿主机 ./data 挂载到这里。
+      APP_ROOT: ${APP_ROOT:-/app/data}
+      # TELEGRAM_API_ID / TELEGRAM_API_HASH：必填，从 https://my.telegram.org/apps 申请。
       TELEGRAM_API_ID: ${TELEGRAM_API_ID}
       TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
-      # Uncomment the following lines to enable database connection, you can see .env.example for more details.
+      # TELEGRAM_LOG_LEVEL：TDLib 日志级别。0 最安静，数字越大日志越详细。
+      TELEGRAM_LOG_LEVEL: ${TELEGRAM_LOG_LEVEL:-0}
+      # 如需使用外部数据库，取消下面配置注释，并在 .env 中填写对应值；默认不配置时使用 SQLite。
       #DB_TYPE: ${DB_TYPE}
       #DB_HOST: ${DB_HOST}
       #DB_PORT: ${DB_PORT}
       #DB_USER: ${DB_USER}
       #DB_PASSWORD: ${DB_PASSWORD}
       #DB_NAME: ${DB_NAME}
+      # ADMIN_USERNAME / ADMIN_PASSWORD：首次初始化管理员账号密码。数据库已有凭据后不再覆盖。
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      # OpenAI 配置：只有使用 AI 相关能力时才需要取消注释。
+      #OPENAI_API_KEY: ${OPENAI_API_KEY}
+      #OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      #OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
     ports:
+      # 左边 6543 是宿主机端口，右边 80 是容器内端口；浏览器访问 http://服务器IP:6543。
       - "6543:80"
     volumes:
+      # 持久化数据目录。删除或重建容器不会丢失这里的数据。
       - ./data:/app/data
+      # 可选：如果配置了自动转存到其他目录，可以把宿主机目录挂载进容器。
       # - ./other-files-for-transfer:/app/other-files-for-transfer
 
-# Uncomment the following lines to enable database services.
+# 如需内置 PostgreSQL，取消下面整个服务块注释，并把主服务的 DB_TYPE 设置为 postgres。
 #  telegram-files-postgres:
 #    container_name: telegram-files-postgres
 #    image: postgres:15-alpine
@@ -55,6 +73,7 @@ services:
 #      timeout: 3s
 #      retries: 30
 #
+# 如需内置 MySQL，取消下面整个服务块注释，并把主服务的 DB_TYPE 设置为 mysql。
 #  telegram-files-mysql:
 #    container_name: telegram-files-mysql
 #    image: mysql:8

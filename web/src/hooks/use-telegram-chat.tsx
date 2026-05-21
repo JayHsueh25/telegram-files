@@ -36,8 +36,8 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  const accountId = searchParams.get("id") ?? "";
-  const chatId = searchParams.get("chatId") ?? "";
+  const accountId = searchParams.get("id") ?? undefined;
+  const chatId = searchParams.get("chatId") ?? undefined;
 
   const handleQueryChange = useDebouncedCallback((search: string) => {
     setQuery(search);
@@ -48,7 +48,9 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
     isLoading,
     mutate,
   } = useSWR<TelegramChat[]>(
-    `/telegram/${accountId}/chats?query=${query}&archived=${archived}&chatId=${chatId ?? ""}`,
+    accountId
+      ? `/telegram/${accountId}/chats?query=${query}&archived=${archived}&chatId=${chatId ?? ""}`
+      : null,
   );
 
   const chat = useMemo(
@@ -57,7 +59,7 @@ export const TelegramChatProvider: React.FC<TelegramChatProviderProps> = ({
   );
 
   const handleChatChange = (newChatId: string) => {
-    if (newChatId === chatId) {
+    if (!accountId || newChatId === chatId) {
       return;
     }
     const chat = chats?.find((c) => c.id === newChatId);
