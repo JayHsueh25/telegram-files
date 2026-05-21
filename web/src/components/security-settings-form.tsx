@@ -41,7 +41,7 @@ export function SecuritySettingsForm() {
       setConfirmPassword("");
       toast({
         variant: "success",
-        description: "账号与密码已更新。",
+        description: "账号和密码已更新。",
       });
     } catch (submissionError) {
       setError(
@@ -64,7 +64,7 @@ export function SecuritySettingsForm() {
             {" "}
             {username ?? "admin"}
           </span>
-          。修改后会立即覆盖旧账号和旧密码。
+          。保存后会立即覆盖旧账号和旧密码。
         </p>
       </div>
 

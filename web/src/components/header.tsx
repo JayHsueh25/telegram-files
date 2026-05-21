@@ -27,6 +27,7 @@ import AccountSelect from "@/components/account-select";
 import { useSearchParams } from "next/navigation";
 import { useSettings } from "@/hooks/use-settings";
 import { useAuth } from "@/hooks/use-auth";
+import { AccountSecurityDialog } from "@/components/account-security-dialog";
 
 export function Header() {
   const useTelegramAccountProps = useTelegramAccount();
@@ -90,6 +91,8 @@ export function Header() {
             )}
 
             <ThemeToggleButton />
+
+            <AccountSecurityDialog />
 
             <TooltipWrapper
               content={username ? `Signed in as ${username}` : "Logout"}

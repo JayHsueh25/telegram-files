@@ -36,6 +36,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useTelegramChat } from "@/hooks/use-telegram-chat";
 import { useSettings } from "@/hooks/use-settings";
+import { AccountSecurityDialog } from "@/components/account-security-dialog";
 
 export function MobileHeader() {
   const { accountDownloadSpeed } = useWebsocket();
@@ -190,6 +191,7 @@ function MenuDrawer() {
                 </Badge>
 
                 <ThemeToggleButton />
+                <AccountSecurityDialog compact={true} />
                 <SettingsDialog />
               </div>
             </div>

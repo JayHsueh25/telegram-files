@@ -49,12 +49,12 @@ export const SettingsDialog: React.FC = () => {
           className="mt-3 flex h-full flex-col overflow-hidden"
         >
           <TabsList className="min-h-9 justify-start overflow-auto">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="statistics">Statistics</TabsTrigger>
-            <TabsTrigger value="proxys">Proxys</TabsTrigger>
+            <TabsTrigger value="general">通用</TabsTrigger>
+            <TabsTrigger value="security">账号安全</TabsTrigger>
+            <TabsTrigger value="statistics">统计</TabsTrigger>
+            <TabsTrigger value="proxys">代理</TabsTrigger>
             <TabsTrigger value="api">API</TabsTrigger>
-            <TabsTrigger value="about">About</TabsTrigger>
+            <TabsTrigger value="about">关于</TabsTrigger>
           </TabsList>
           <TabsContent value="general" className="overflow-hidden">
             <SettingsForm />

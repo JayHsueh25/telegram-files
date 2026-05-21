@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import Link from "next/link";
 import TelegramIcon from "@/components/telegram-icon";
+import { AccountSecurityDialog } from "@/components/account-security-dialog";
 
 export default function AccountPage() {
   return (
@@ -17,7 +18,10 @@ export default function AccountPage() {
 
             <h3 className="text-lg font-semibold">Telegram File Manager</h3>
 
-            <ThemeToggleButton />
+            <div className="flex items-center gap-2">
+              <ThemeToggleButton />
+              <AccountSecurityDialog />
+            </div>
           </div>
         </CardContent>
       </Card>

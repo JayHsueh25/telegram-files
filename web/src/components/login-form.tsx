@@ -56,7 +56,7 @@ export function LoginForm() {
         <p className="text-sm leading-6 text-muted-foreground">
           登录后才能访问站内功能。首次初始化默认账号密码为
           <span className="font-medium text-foreground"> admin / admin </span>
-          ，登录后请及时修改。
+          ，登录后可在右上角“账号安全”中修改账号和密码。
         </p>
       </CardHeader>
       <CardContent>
