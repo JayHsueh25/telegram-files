@@ -7,11 +7,15 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class MessyUtilsTest {
+
+    private Path tempDir;
 
     private File smallFile;
 
@@ -19,12 +23,15 @@ class MessyUtilsTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        smallFile = new File("small_test_file.txt");
+        tempDir = Path.of("build", "tmp", "messy-utils-test", UUID.randomUUID().toString());
+        Files.createDirectories(tempDir);
+
+        smallFile = tempDir.resolve("small_test_file.txt").toFile();
         try (FileWriter writer = new FileWriter(smallFile)) {
             writer.write("Hello, this is a small test file!");
         }
 
-        largeFile = new File("large_test_file.txt");
+        largeFile = tempDir.resolve("large_test_file.txt").toFile();
         try (FileWriter writer = new FileWriter(largeFile)) {
             for (int i = 0; i < 1_000_000; i++) {
                 writer.write("This is a large test file for MD5 computation.\n");
@@ -34,11 +41,16 @@ class MessyUtilsTest {
 
     @AfterEach
     void tearDown() {
-        if (smallFile.exists()) {
-            smallFile.delete();
-        }
-        if (largeFile.exists()) {
-            largeFile.delete();
+        // calculateFileMD5 uses a memory-mapped buffer. On Windows the mapping can outlive
+        // the method frame briefly, so cleanup is best-effort and never fails the test.
+        deleteIfPresent(smallFile);
+        deleteIfPresent(largeFile);
+        deleteIfPresent(tempDir == null ? null : tempDir.toFile());
+    }
+
+    private void deleteIfPresent(File file) {
+        if (file != null && file.exists()) {
+            file.delete();
         }
     }
 
@@ -60,7 +72,7 @@ class MessyUtilsTest {
 
     @Test
     void testCalculateFileMD5ForNonExistentFile() {
-        File nonExistentFile = new File("non_existent_file.txt");
+        File nonExistentFile = tempDir.resolve("non_existent_file.txt").toFile();
         String md5 = MessyUtils.calculateFileMD5(nonExistentFile);
 
         assertNull(md5, "MD5 hash for non-existent file should be null!");
@@ -74,7 +86,7 @@ class MessyUtilsTest {
 
     @Test
     void testCompareFilesMD5ForMissingFile() {
-        File missingFile = new File("missing.txt");
+        File missingFile = tempDir.resolve("missing.txt").toFile();
         assertFalse(MessyUtils.compareFilesMD5(smallFile, missingFile),
                 "MD5 comparison should return false if one of the files is missing!");
     }

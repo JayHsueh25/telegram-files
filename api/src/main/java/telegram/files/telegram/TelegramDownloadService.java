@@ -15,7 +15,7 @@ import telegram.files.DataVerticle;
 import telegram.files.EventEnum;
 import telegram.files.EventPayload;
 import telegram.files.TdApiHelp;
-import telegram.files.TelegramClient;
+import telegram.files.TelegramClientGateway;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.SettingAutoRecords;
 import telegram.files.repository.SettingKey;
@@ -34,7 +34,7 @@ public class TelegramDownloadService {
     }
 
     public Future<FileRecord> startDownload(
-            TelegramClient client,
+            TelegramClientGateway client,
             TelegramRecord telegramRecord,
             Long chatId,
             Long messageId,
@@ -101,7 +101,7 @@ public class TelegramDownloadService {
     }
 
     public Future<Boolean> downloadThumbnail(
-            TelegramClient client,
+            TelegramClientGateway client,
             Long chatId,
             Long messageId,
             FileRecord thumbnailRecord,
@@ -132,7 +132,7 @@ public class TelegramDownloadService {
     }
 
     public Future<Void> cancelDownload(
-            TelegramClient client,
+            TelegramClientGateway client,
             Integer fileId,
             Consumer<EventPayload> sendEvent
     ) {
@@ -161,7 +161,7 @@ public class TelegramDownloadService {
     }
 
     public Future<Void> togglePauseDownload(
-            TelegramClient client,
+            TelegramClientGateway client,
             Integer fileId,
             boolean isPaused,
             FileDownloadStatusSync syncFileDownloadStatus
@@ -198,7 +198,7 @@ public class TelegramDownloadService {
     }
 
     public Future<Void> removeFile(
-            TelegramClient client,
+            TelegramClientGateway client,
             Integer fileId,
             String uniqueId,
             Consumer<EventPayload> sendEvent,

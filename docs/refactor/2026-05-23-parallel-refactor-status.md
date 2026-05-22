@@ -33,7 +33,7 @@
 
 ## Final Verification
 
-- API full test: `cd api && .\gradlew.bat test` still fails after compiling successfully. Current result is 75 tests completed, 7 failed, 1 skipped. The failures match the recorded baseline categories: `FileDownloadStatusConcurrentTest`, `AutoRecordsHolderTest`, `DataVerticleMigrationTest`, and `DataVerticleTest` fail through `Config`/`DataVerticle` initialization with `TELEGRAM_API_ID is not set`; `MessyUtilsTest` fails on `small_test_file.txt` file access. No preview compilation failure remains.
+- API full test: follow-up branch `codex/test-stability-after-refactor` now passes `cd api && .\gradlew.bat test`. Latest run exits with `BUILD SUCCESSFUL`; test result XML reports 97 tests, 0 failures, 0 errors, and 1 skipped.
 - Web check: `cd web && npm run check` exits 0 with the same 3 pre-existing warnings in `debug-telegram-method.tsx`, `use-toast.ts`, and `use-websocket.tsx`.
 - Placeholder check: `rg "ctx.fail\\(501\\)" api/src/main/java/telegram/files/http` has no matches.
 - Large file check: `HttpVerticle.java` is now 669 lines and `TelegramVerticle.java` is now 620 lines in this worktree. The refactor also added focused backend route/service files and frontend hook/filter submodules.
@@ -42,9 +42,8 @@
 - Frontend file state extraction: completed for query key and realtime status merging.
 - Frontend component split: completed for automation form sections and file filters.
 - API error contract: completed with `ApiError` code/error payloads and frontend `ApiRequestError`.
-- Telegram service extraction: completed for chat file query and download control services.
+- Telegram service extraction: completed for chat file query and download control services. Follow-up service-level tests now cover `TelegramChatFileService.getChatFilesCount` aggregation and `TelegramDownloadService.downloadThumbnail` missing/completed/existing-record branches using a mockable `TelegramClientGateway`.
+- Test stability follow-up: completed. Gradle test defaults now provide safe fake Telegram credentials, a per-run `APP_ROOT`, and a test `DATA_PATH`; SQLite cleanup undeploys Vert.x deployments and deletes only the test DB cluster with retry; `MessyUtilsTest` uses manually managed unique fixture directories to avoid JUnit temp cleanup failures on Windows memory-mapped files; `FileDownloadStatusConcurrentTest` starts child JVMs with `--enable-preview` and asserts child process exit codes.
 - Known risks:
-  - API full-suite green status is still blocked by pre-existing environment/test-resource issues, especially missing `TELEGRAM_API_ID` and `MessyUtilsTest` file access.
-  - `TelegramChatFileService` and `TelegramDownloadService` currently have construction-level tests; reviews noted non-blocking follow-up value in service-level behavior tests with mocked `TelegramClient`.
-  - TDLib live integration still needs manual smoke testing with a real Telegram account before release.
+  - API full-suite is green in the local SQLite test environment, but TDLib live integration still needs manual smoke testing with a real Telegram account before release.
   - Docker image build can be run before release if release packaging is in scope.

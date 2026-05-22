@@ -7,7 +7,7 @@ import io.vertx.core.json.JsonObject;
 import org.drinkless.tdlib.TdApi;
 import telegram.files.FileRecordRetriever;
 import telegram.files.TdApiHelp;
-import telegram.files.TelegramClient;
+import telegram.files.TelegramClientGateway;
 import telegram.files.TelegramConverter;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.TelegramRecord;
@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 public class TelegramChatFileService {
 
     public Future<JsonObject> getChatFiles(
-            TelegramClient client,
+            TelegramClientGateway client,
             TelegramRecord telegramRecord,
             long chatId,
             Map<String, String> filter
@@ -45,7 +45,7 @@ public class TelegramChatFileService {
         }
     }
 
-    private Future<TdApi.FoundChatMessages> getIdleChatFiles(TelegramClient client,
+    private Future<TdApi.FoundChatMessages> getIdleChatFiles(TelegramClientGateway client,
                                                              TdApi.SearchChatMessages searchChatMessages,
                                                              int seq) {
         if (seq != 0) {
@@ -76,7 +76,7 @@ public class TelegramChatFileService {
                 });
     }
 
-    public Future<JsonObject> getChatFilesCount(TelegramClient client, long chatId) {
+    public Future<JsonObject> getChatFilesCount(TelegramClientGateway client, long chatId) {
         return Future.all(
                 Stream.of(new TdApi.SearchMessagesFilterPhotoAndVideo(),
                                 new TdApi.SearchMessagesFilterPhoto(),

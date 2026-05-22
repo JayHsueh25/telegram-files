@@ -73,7 +73,12 @@ test {
             "-XX:+EnableDynamicAgentLoading",
             "--enable-preview",
             "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}"
-    environment "APP_ROOT", "${testClassesDirs.asPath}"
+    def testAppRoot = layout.buildDirectory.dir("tmp/test-app-root/${UUID.randomUUID()}").get().asFile.absolutePath
+    environment "APP_ROOT", testAppRoot
+    environment "APP_ENV", "test"
+    environment "DATA_PATH", "data.db"
+    environment "TELEGRAM_API_ID", System.getenv("TELEGRAM_API_ID") ?: "1"
+    environment "TELEGRAM_API_HASH", System.getenv("TELEGRAM_API_HASH") ?: "test-api-hash"
     useJUnitPlatform()
     finalizedBy jacocoTestReport
 }
