@@ -11,6 +11,7 @@ import { useWebsocket } from "@/hooks/use-websocket";
 import { WebSocketMessageType } from "@/lib/websocket-types";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDebounce } from "use-debounce";
+import { buildFileQueryKey } from "@/hooks/files/use-file-query-key";
 
 const DEFAULT_FILTERS: FileFilter = {
   search: "",
@@ -34,9 +35,6 @@ export function useFiles(
   link?: string,
 ) {
   const noAccountSpecified = accountId === "-1" && chatId === "-1";
-  const url = noAccountSpecified
-    ? "/files"
-    : `/telegram/${accountId}/chat/${chatId}/files`;
   const { lastJsonMessage } = useWebsocket();
   const [latestFilesStatus, setLatestFileStatus] = useState<
     Record<
@@ -58,50 +56,15 @@ export function useFiles(
     { ...DEFAULT_FILTERS, offline: noAccountSpecified },
   );
   const getKey = (page: number, previousPageData: FileResponse) => {
-    const params = new URLSearchParams({
-      ...(filters.search && {
-        search: window.encodeURIComponent(filters.search),
-      }),
-      ...(filters.type && { type: filters.type }),
-      ...(filters.downloadStatus && { downloadStatus: filters.downloadStatus }),
-      ...(filters.transferStatus && { transferStatus: filters.transferStatus }),
-      ...(filters.offline && { offline: "true" }),
-      ...(filters.tags.length > 0 && {
-        tags: filters.tags.join(","),
-      }),
-      ...(messageThreadId && { messageThreadId: messageThreadId.toString() }),
-      ...(link && { link: window.encodeURIComponent(link) }),
-      ...(filters.dateType && { dateType: filters.dateType }),
-      ...(filters.dateRange && { dateRange: filters.dateRange.join(",") }),
-      ...(filters.sizeRange && { sizeRange: filters.sizeRange.join(",") }),
-      ...(filters.sizeUnit && { sizeUnit: filters.sizeUnit }),
-      ...(filters.sort && { sort: filters.sort }),
-      ...(filters.order && { order: filters.order }),
+    return buildFileQueryKey({
+      accountId,
+      chatId,
+      filters,
+      page,
+      previousPageData,
+      messageThreadId,
+      link,
     });
-
-    if (page === 0) {
-      return `${url}?${params.toString()}`;
-    }
-
-    if (!previousPageData) {
-      return null;
-    }
-
-    params.set("fromMessageId", previousPageData.nextFromMessageId.toString());
-    if (filters.offline && previousPageData.files.length > 0) {
-      const lastFile =
-        previousPageData.files[previousPageData.files.length - 1];
-      if (filters.sort === "size") {
-        params.set("fromSortField", lastFile!.size.toString());
-      } else if (filters.sort === "completion_date") {
-        params.set("fromSortField", lastFile!.completionDate.toString());
-      } else if (filters.sort === "date") {
-        params.set("fromSortField", lastFile!.date.toString());
-      } else if (filters.sort === "reaction_count") {
-        params.set("fromSortField", lastFile!.reactionCount.toString());
-      }
-    }
-    return `${url}?${params.toString()}`;
   };
 
   const {
