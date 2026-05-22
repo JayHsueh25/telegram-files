@@ -2,6 +2,7 @@ package telegram.files.http;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 public final class RouteSupport {
@@ -22,10 +23,11 @@ public final class RouteSupport {
     }
 
     public static JsonObject body(RoutingContext ctx) {
-        if (ctx.body() == null) {
+        RequestBody requestBody = ctx.body();
+        if (requestBody == null) {
             return JsonObject.of();
         }
-        JsonObject jsonBody = ctx.body().asJsonObject();
+        JsonObject jsonBody = requestBody.asJsonObject();
         if (jsonBody == null) {
             return JsonObject.of();
         }
@@ -41,8 +43,18 @@ public final class RouteSupport {
                         ctx.end();
                         return;
                     }
-                    ctx.json(result);
+                    try {
+                        ctx.json(result);
+                    } catch (Throwable error) {
+                        if (!ctx.response().ended()) {
+                            ctx.fail(error);
+                        }
+                    }
                 })
-                .onFailure(ctx::fail);
+                .onFailure(error -> {
+                    if (!ctx.response().ended()) {
+                        ctx.fail(error);
+                    }
+                });
     }
 }
