@@ -14,12 +14,17 @@ public record FileSort(String column, String direction) {
             "size",
             "reaction_count");
 
-    public static FileSort from(String sort, String order) {
-        String column = StrUtil.blankToDefault(sort, DEFAULT_COLUMN);
+    public FileSort {
         if (!SUPPORTED_COLUMNS.contains(column)) {
             throw new IllegalArgumentException("Unsupported file sort field: " + column);
         }
+        if (!Set.of("ASC", "DESC").contains(direction)) {
+            throw new IllegalArgumentException("Unsupported file sort direction: " + direction);
+        }
+    }
 
+    public static FileSort from(String sort, String order) {
+        String column = StrUtil.blankToDefault(sort, DEFAULT_COLUMN);
         String direction = "asc".equals(order) ? "ASC" : "DESC";
         return new FileSort(column, direction);
     }

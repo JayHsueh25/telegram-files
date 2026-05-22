@@ -23,6 +23,24 @@ class FileQueryFilterTest {
     }
 
     @Test
+    void constructorRejectsUnsupportedSortField() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FileSort("created_at", "ASC"));
+
+        assertEquals("Unsupported file sort field: created_at", exception.getMessage());
+    }
+
+    @Test
+    void constructorRejectsUnsupportedSortDirection() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> new FileSort("message_id", "asc"));
+
+        assertEquals("Unsupported file sort direction: asc", exception.getMessage());
+    }
+
+    @Test
     void emptyFilterUsesMessageIdDescendingSort() {
         FileQueryFilter filter = FileQueryFilter.from(Map.of());
 
@@ -58,6 +76,7 @@ class FileQueryFilterTest {
         FileSort sort = FileSort.from("message_id", "asc");
 
         assertEquals("ASC", sort.direction());
+        assertTrue(sort.isAscending());
         assertTrue(sort.isCustom());
         assertFalse(sort.isDefaultSort());
     }
