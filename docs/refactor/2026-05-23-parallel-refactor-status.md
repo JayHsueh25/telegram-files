@@ -7,13 +7,14 @@
 - API baseline result: Lane G updated `api/build.gradle` to pass `--enable-preview` to Java compilation and the test JVM. Re-running `cd api && .\gradlew.bat test` now passes `compileJava` and `compileTestJava`, then fails in the test phase with 36 tests completed, 7 failed, 1 skipped. Remaining failures are not preview compilation errors: `AutoRecordsHolderTest` hits `ExceptionInInitializerError`, `DataVerticleMigrationTest` and `DataVerticleTest` cannot initialize `telegram.files.Config`, `FileDownloadStatusConcurrentTest` cannot initialize `telegram.files.DataVerticle`, and `MessyUtilsTest` cannot find `small_test_file.txt`.
 - Web baseline result: after installing locked dependencies with `npm ci`, `cd web && npm run check` exits 0 with 3 pre-existing warnings in `debug-telegram-method.tsx`, `use-toast.ts`, and `use-websocket.tsx`.
 - Integration check after merging lanes G/D/E: `cd web && npm run check` still exits 0 with the same 3 warnings. `cd api && .\gradlew.bat test` passes `compileJava` and `compileTestJava`, then fails in the test phase with the same 36 tests completed, 7 failed, 1 skipped pattern recorded above.
+- Lane B integration check after merging the query model and SQL builder: `cd api && .\gradlew.bat test --tests telegram.files.repository.query.FileQuerySqlBuilderTest --tests telegram.files.repository.query.FileQueryFilterTest` exits 0. Gradle reports only the existing deprecation warning.
 
 ## Active Lanes
 
 | Lane | Owner | Branch/Worktree | Files Owned | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
 | A | unassigned | `.worktrees/parallel-system-refactor` | `api/src/main/java/telegram/files/HttpVerticle.java`, `api/src/main/java/telegram/files/http/**` | waiting | Backend routes |
-| B | reviewed and partially merged | `.worktrees/lane-b-file-query` | `api/src/main/java/telegram/files/repository/impl/FileRepositoryImpl.java`, `api/src/main/java/telegram/files/repository/query/**` | in_progress | Task 2A query model merged via `merge: lane b file query model`; `FileQueryFilterTest` passes |
+| B | reviewed and merged | `.worktrees/lane-b-sql-builder` | `api/src/main/java/telegram/files/repository/impl/FileRepositoryImpl.java`, `api/src/main/java/telegram/files/repository/query/**` | completed | Task 2A query model and Task 2B SQL builder merged; `FileQuerySqlBuilderTest` and `FileQueryFilterTest` pass |
 | C | unassigned | `.worktrees/parallel-system-refactor` | `api/src/main/java/telegram/files/TelegramVerticle.java`, `api/src/main/java/telegram/files/telegram/**` | blocked | Starts after Lane A/B |
 | D | reviewed and merged | `.worktrees/lane-d-file-hooks` | `web/src/hooks/use-files.ts`, `web/src/hooks/files/**` | completed | Merged via `merge: lane d file query hook` |
 | E | reviewed and merged | `.worktrees/lane-e-components` | large frontend components | completed | Merged via `merge: lane e automation form split` |
