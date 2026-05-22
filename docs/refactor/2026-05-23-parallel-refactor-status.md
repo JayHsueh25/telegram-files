@@ -13,7 +13,7 @@
 | Lane | Owner | Branch/Worktree | Files Owned | Status | Notes |
 | --- | --- | --- | --- | --- | --- |
 | A | unassigned | `.worktrees/parallel-system-refactor` | `api/src/main/java/telegram/files/HttpVerticle.java`, `api/src/main/java/telegram/files/http/**` | waiting | Backend routes |
-| B | unassigned | `.worktrees/parallel-system-refactor` | `api/src/main/java/telegram/files/repository/impl/FileRepositoryImpl.java`, `api/src/main/java/telegram/files/repository/query/**` | waiting | File query |
+| B | reviewed and partially merged | `.worktrees/lane-b-file-query` | `api/src/main/java/telegram/files/repository/impl/FileRepositoryImpl.java`, `api/src/main/java/telegram/files/repository/query/**` | in_progress | Task 2A query model merged via `merge: lane b file query model`; `FileQueryFilterTest` passes |
 | C | unassigned | `.worktrees/parallel-system-refactor` | `api/src/main/java/telegram/files/TelegramVerticle.java`, `api/src/main/java/telegram/files/telegram/**` | blocked | Starts after Lane A/B |
 | D | reviewed and merged | `.worktrees/lane-d-file-hooks` | `web/src/hooks/use-files.ts`, `web/src/hooks/files/**` | completed | Merged via `merge: lane d file query hook` |
 | E | reviewed and merged | `.worktrees/lane-e-components` | large frontend components | completed | Merged via `merge: lane e automation form split` |
