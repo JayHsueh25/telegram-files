@@ -30,6 +30,7 @@ import io.vertx.ext.web.sstore.LocalSessionStore;
 import io.vertx.ext.web.sstore.SessionStore;
 import org.drinkless.tdlib.TdApi;
 import org.jooq.lambda.function.Function2;
+import telegram.files.http.ApiError;
 import telegram.files.http.FileRoutes;
 import telegram.files.http.SettingsRoutes;
 import telegram.files.repository.SettingAutoRecords;
@@ -175,22 +176,21 @@ public class HttpVerticle extends AbstractVerticle {
 
         router.route()
                 .failureHandler(ctx -> {
-                    int statusCode = ctx.statusCode();
-                    if (statusCode < 500) {
-                        if (ctx.response().ended()) {
-                            return;
-                        }
-                        ctx.response().setStatusCode(statusCode).end();
+                    if (ctx.response().ended()) {
                         return;
                     }
+                    int statusCode = ctx.statusCode();
                     Throwable throwable = ctx.failure();
-                    log.trace("route: %s, statusCode: %d".formatted(
-                            ctx.request().path(),
-                            statusCode), throwable);
+                    if (statusCode >= 500) {
+                        log.trace("route: %s, statusCode: %d".formatted(
+                                ctx.request().path(),
+                                statusCode), throwable);
+                    }
+                    String message = throwable == null ? "Request failed" : throwable.getMessage();
                     HttpServerResponse response = ctx.response();
                     response.setStatusCode(statusCode)
                             .putHeader("Content-Type", "application/json")
-                            .end(JsonObject.of("error", throwable == null ? "☹️Sorry! Not today." : throwable.getMessage()).encode());
+                            .end(ApiError.of(statusCode >= 500 ? "INTERNAL_ERROR" : "REQUEST_ERROR", message).toJson().encode());
                 });
         return router;
     }
