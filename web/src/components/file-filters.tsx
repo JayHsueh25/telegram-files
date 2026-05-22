@@ -142,6 +142,7 @@ export default function FileFilters({
                   telegramId={telegramId}
                   chatId={chatId}
                   value={localFilters}
+                  appliedType={filters.type}
                   onChange={setLocalFilters}
                 />
 

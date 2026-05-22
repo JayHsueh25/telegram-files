@@ -78,6 +78,7 @@ interface FileSearchFilterProps {
   telegramId: string;
   chatId: string;
   value: FileFilter;
+  appliedType?: FileFilter["type"];
   onChange: (value: FileFilter) => void;
 }
 
@@ -85,6 +86,7 @@ export function FileSearchFilter({
   telegramId,
   chatId,
   value,
+  appliedType = value.type,
   onChange,
 }: FileSearchFilterProps) {
   const handleSearchChange = (search: string) => {
@@ -118,7 +120,7 @@ export function FileSearchFilter({
         offline={value.offline}
         telegramId={telegramId}
         chatId={chatId}
-        type={value.type}
+        type={appliedType}
         onChange={handleTypeChange}
       />
 
