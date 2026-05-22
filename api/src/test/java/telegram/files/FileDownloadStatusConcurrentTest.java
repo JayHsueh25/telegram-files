@@ -136,6 +136,7 @@ public class FileDownloadStatusConcurrentTest {
                     "-cp",
                     classpath,
                     "-Djava.library.path=" + System.getenv("TDLIB_PATH"),
+                    "--enable-preview",
                     "telegram.files.UpdateFileDownloadProcess",
                     String.valueOf(newFileId),
                     "unique_id",
@@ -148,7 +149,7 @@ public class FileDownloadStatusConcurrentTest {
         }
 
         for (Process process : processes) {
-            process.waitFor();
+            Assertions.assertEquals(0, process.waitFor(), "Concurrent update child process should exit successfully");
         }
 
         Future<FileRecord> future = DataVerticle.fileRepository.getByPrimaryKey(newFileId, fileRecord.uniqueId());

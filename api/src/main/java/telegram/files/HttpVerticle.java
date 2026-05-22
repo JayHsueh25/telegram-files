@@ -30,9 +30,10 @@ import io.vertx.ext.web.sstore.LocalSessionStore;
 import io.vertx.ext.web.sstore.SessionStore;
 import org.drinkless.tdlib.TdApi;
 import org.jooq.lambda.function.Function2;
+import telegram.files.http.ApiError;
+import telegram.files.http.FileRoutes;
+import telegram.files.http.SettingsRoutes;
 import telegram.files.repository.SettingAutoRecords;
-import telegram.files.repository.SettingKey;
-import telegram.files.repository.SettingRecord;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -150,8 +151,7 @@ public class HttpVerticle extends AbstractVerticle {
         router.post("/auth/credentials").handler(this::handleAdminCredentialsUpdate);
         router.route("/ws").handler(this::handleWebSocket);
 
-        router.get("/settings").handler(this::handleSettings);
-        router.post("/settings/create").handler(this::handleSettingsCreate);
+        new SettingsRoutes().mount(router);
 
         router.post("/telegram/create").handler(this::handleTelegramCreate);
         router.post("/telegram/:telegramId/delete").handler(this::handleTelegramDelete);
@@ -168,40 +168,40 @@ public class HttpVerticle extends AbstractVerticle {
         router.get("/telegram/:telegramId/ping").handler(this::handleTelegramPing);
         router.get("/telegram/:telegramId/test-network").handler(this::handleTelegramTestNetwork);
 
-        router.get("/:telegramId/file/:uniqueId").handler(this::handleFilePreview);
-        router.post("/:telegramId/file/start-download").handler(this::handleFileStartDownload);
-        router.post("/:telegramId/file/cancel-download").handler(this::handleFileCancelDownload);
-        router.post("/:telegramId/file/toggle-pause-download").handler(this::handleFileTogglePauseDownload);
-        router.post("/:telegramId/file/remove").handler(this::handleFileRemove);
-        router.post("/:telegramId/file/update-auto-settings").handler(this::handleAutoSettingsUpdate);
-
-        router.get("/files/count").handler(this::handleFilesCount);
-        router.get("/files").handler(this::handleFiles);
-        router.post("/files/start-download-multiple").handler(this::handleFileStartDownloadMultiple);
-        router.post("/files/cancel-download-multiple").handler(this::handleFileCancelDownloadMultiple);
-        router.post("/files/toggle-pause-download-multiple").handler(this::handleFileTogglePauseDownloadMultiple);
-        router.post("/files/remove-multiple").handler(this::handleFileRemoveMultiple);
-        router.post("/files/update-tags").handler(this::handleFileTagsUpdateMultiple);
-        router.post("/file/:uniqueId/update-tags").handler(this::handleFileTagsUpdate);
+        new FileRoutes(
+                this::handleFilePreview,
+                this::handleFileStartDownload,
+                this::handleFileCancelDownload,
+                this::handleFileTogglePauseDownload,
+                this::handleFileRemove,
+                this::handleAutoSettingsUpdate,
+                this::handleFilesCount,
+                this::handleFiles,
+                this::handleFileStartDownloadMultiple,
+                this::handleFileCancelDownloadMultiple,
+                this::handleFileTogglePauseDownloadMultiple,
+                this::handleFileRemoveMultiple,
+                this::handleFileTagsUpdateMultiple,
+                this::handleFileTagsUpdate
+        ).mount(router);
 
         router.route()
                 .failureHandler(ctx -> {
-                    int statusCode = ctx.statusCode();
-                    if (statusCode < 500) {
-                        if (ctx.response().ended()) {
-                            return;
-                        }
-                        ctx.response().setStatusCode(statusCode).end();
+                    if (ctx.response().ended()) {
                         return;
                     }
+                    int statusCode = ctx.statusCode();
                     Throwable throwable = ctx.failure();
-                    log.trace("route: %s, statusCode: %d".formatted(
-                            ctx.request().path(),
-                            statusCode), throwable);
+                    if (statusCode >= 500) {
+                        log.trace("route: %s, statusCode: %d".formatted(
+                                ctx.request().path(),
+                                statusCode), throwable);
+                    }
+                    String message = throwable == null ? "Request failed" : throwable.getMessage();
                     HttpServerResponse response = ctx.response();
                     response.setStatusCode(statusCode)
                             .putHeader("Content-Type", "application/json")
-                            .end(JsonObject.of("error", throwable == null ? "☹️Sorry! Not today." : throwable.getMessage()).encode());
+                            .end(ApiError.of(statusCode >= 500 ? "INTERNAL_ERROR" : "REQUEST_ERROR", message).toJson().encode());
                 });
         return router;
     }
@@ -378,51 +378,6 @@ public class HttpVerticle extends AbstractVerticle {
                         .setStatusCode(400)
                         .putHeader("Content-Type", "application/json")
                         .end(JsonObject.of("error", err.getMessage()).encode()));
-    }
-
-    private void handleSettingsCreate(RoutingContext ctx) {
-        JsonObject object = ctx.body().asJsonObject();
-        if (CollUtil.isEmpty(object)) {
-            ctx.fail(400);
-            return;
-        }
-
-        Future.all(object.stream()
-                        .map(setting -> DataVerticle.settingRepository.createOrUpdate(setting.getKey(),
-                                Convert.toStr(setting.getValue(), "")))
-                        .toList())
-                .map(CompositeFuture::<SettingRecord>list)
-                .onSuccess(records -> {
-                    records.forEach(record ->
-                            vertx.eventBus().publish(EventEnum.SETTING_UPDATE.address(record.key()), record.value()));
-                    ctx.end();
-                })
-                .onFailure(ctx::fail);
-    }
-
-    private void handleSettings(RoutingContext ctx) {
-        String keysStr = ctx.request().getParam("keys");
-        if (StrUtil.isBlank(keysStr)) {
-            ctx.fail(400);
-            return;
-        }
-        List<String> keys = Arrays.asList(keysStr.split(","));
-        DataVerticle.settingRepository
-                .getByKeys(keys)
-                .onSuccess(settings -> {
-                    JsonObject object = new JsonObject();
-                    for (SettingRecord record : settings) {
-                        object.put(record.key(), record.value());
-                    }
-                    for (String key : keys) {
-                        if (object.containsKey(key)) {
-                            continue;
-                        }
-                        object.put(key, SettingKey.valueOf(key).defaultValue);
-                    }
-                    ctx.json(object);
-                })
-                .onFailure(ctx::fail);
     }
 
     private void handleTelegramCreate(RoutingContext ctx) {

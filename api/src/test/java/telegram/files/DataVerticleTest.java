@@ -1,6 +1,5 @@
 package telegram.files;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Version;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
@@ -14,6 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.SettingKey;
 import telegram.files.repository.TelegramRecord;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 @ExtendWith(VertxExtension.class)
 public class DataVerticleTest {
@@ -44,12 +49,30 @@ public class DataVerticleTest {
     }
 
     public static Future<Void> clear(Vertx vertx) {
-        if (Config.isSqlite()) {
-            String appRoot = Config.APP_ROOT;
-            if (FileUtil.file(appRoot).exists()) {
-                FileUtil.clean(appRoot);
-            }
+        return undeployAll(vertx)
+                .compose(v -> clearDatabase(vertx));
+    }
+
+    private static Future<Void> undeployAll(Vertx vertx) {
+        List<String> deploymentIds = new ArrayList<>(vertx.deploymentIDs());
+        if (deploymentIds.isEmpty()) {
             return Future.succeededFuture();
+        }
+
+        return Future.all(deploymentIds.stream()
+                        .map(vertx::undeploy)
+                        .toList())
+                .mapEmpty();
+    }
+
+    private static Future<Void> clearDatabase(Vertx vertx) {
+        if (Config.isSqlite()) {
+            try {
+                clearSqliteFiles();
+                return Future.succeededFuture();
+            } catch (Exception e) {
+                return Future.failedFuture(e);
+            }
         } else if (Config.isPostgres()) {
             SqlClient sqlClient = DataVerticle.createSqlClient(vertx, DataVerticle.createDefaultOptions());
 
@@ -85,6 +108,34 @@ public class DataVerticleTest {
                     .mapEmpty();
         } else {
             return Future.failedFuture("Unknown database type");
+        }
+    }
+
+    private static void clearSqliteFiles() throws IOException, InterruptedException {
+        Path dataPath = Path.of(DataVerticle.getDataPath());
+        // SQLite can leave WAL and journal sidecar files next to the main DB file. Tests delete
+        // only this database cluster, not the whole APP_ROOT, so logs/account fixtures stay intact.
+        deleteWithRetry(dataPath);
+        deleteWithRetry(Path.of(dataPath + "-shm"));
+        deleteWithRetry(Path.of(dataPath + "-wal"));
+        deleteWithRetry(Path.of(dataPath + "-journal"));
+    }
+
+    private static void deleteWithRetry(Path path) throws IOException, InterruptedException {
+        for (int attempt = 1; attempt <= 10; attempt++) {
+            try {
+                Files.deleteIfExists(path);
+                return;
+            } catch (IOException e) {
+                if (attempt == 10) {
+                    throw e;
+                }
+
+                // Windows may release SQLite file handles a little after Vert.x reports undeploy.
+                // A short retry keeps the test deterministic without broadening production code.
+                System.gc();
+                Thread.sleep(100);
+            }
         }
     }
 

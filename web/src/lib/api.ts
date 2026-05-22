@@ -2,6 +2,17 @@ import { env } from "@/env";
 
 let unauthorizedHandler: (() => void) | null = null;
 
+export class ApiRequestError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(status: number, message: string, code?: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export function getApiUrl(): string {
   const url = env.NEXT_PUBLIC_API_URL;
   if (url.startsWith("http")) {
@@ -56,12 +67,24 @@ export async function request<T = any>(
   });
   const responseText = await response.text();
   if (!responseText) {
+    if (!response.ok) {
+      throw new ApiRequestError(
+        response.status,
+        `Request failed with status ${response.status}`,
+      );
+    }
     return undefined as T;
   }
   let data;
   try {
     data = JSON.parse(responseText);
   } catch (e) {
+    if (!response.ok) {
+      throw new ApiRequestError(
+        response.status,
+        `Request failed with status ${response.status}`,
+      );
+    }
     throw new RequestParsedError(responseText);
   }
   if (response.status === 401) {
@@ -69,8 +92,10 @@ export async function request<T = any>(
     throw new UnauthorizedError(data?.error ?? "Unauthorized");
   }
   if (!response.ok) {
-    throw new Error(
+    throw new ApiRequestError(
+      response.status,
       data.error ?? `Request failed with status ${response.status}`,
+      data.code,
     );
   }
 

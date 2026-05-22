@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 
-public class TelegramClient {
+public class TelegramClient implements TelegramClientGateway {
     private static final Log log = LogFactory.get();
 
     private Client client;
@@ -45,11 +45,13 @@ public class TelegramClient {
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public <R extends TdApi.Object> Future<R> execute(TdApi.Function<R> method) {
         return execute(method, false);
     }
 
     @SuppressWarnings("unchecked")
+    @Override
     public <R extends TdApi.Object> Future<R> execute(TdApi.Function<R> method, boolean ignoreException) {
         log.trace("Execute method: %s".formatted(TypeUtil.getTypeArgument(method.getClass())));
         if (!initialized) {
