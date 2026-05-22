@@ -11,11 +11,22 @@ import telegram.files.DataVerticle;
 import telegram.files.EventEnum;
 import telegram.files.repository.SettingKey;
 import telegram.files.repository.SettingRecord;
+import telegram.files.repository.SettingRepository;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class SettingsRoutes {
+
+    private final SettingsStore settingsStore;
+
+    public SettingsRoutes() {
+        this(new RepositorySettingsStore());
+    }
+
+    SettingsRoutes(SettingsStore settingsStore) {
+        this.settingsStore = settingsStore;
+    }
 
     public void mount(Router router) {
         router.get("/settings").handler(this::handleSettings);
@@ -30,10 +41,10 @@ public class SettingsRoutes {
         }
 
         Future.all(object.stream()
-                        .map(setting -> DataVerticle.settingRepository.createOrUpdate(setting.getKey(),
+                        .map(setting -> settingsStore.createOrUpdate(setting.getKey(),
                                 Convert.toStr(setting.getValue(), "")))
                         .toList())
-                .map(CompositeFuture::<SettingRecord>list)
+                .map(CompositeFuture::<SettingValue>list)
                 .onSuccess(records -> {
                     records.forEach(record ->
                             ctx.vertx().eventBus().publish(EventEnum.SETTING_UPDATE.address(record.key()), record.value()));
@@ -49,12 +60,11 @@ public class SettingsRoutes {
             return;
         }
         List<String> keys = Arrays.asList(keysStr.split(","));
-        DataVerticle.settingRepository
-                .getByKeys(keys)
+        settingsStore.getByKeys(keys)
                 .onSuccess(settings -> {
                     JsonObject object = new JsonObject();
-                    for (SettingRecord record : settings) {
-                        object.put(record.key(), record.value());
+                    for (SettingValue setting : settings) {
+                        object.put(setting.key(), setting.value());
                     }
                     for (String key : keys) {
                         if (object.containsKey(key)) {
@@ -65,5 +75,41 @@ public class SettingsRoutes {
                     ctx.json(object);
                 })
                 .onFailure(ctx::fail);
+    }
+
+    interface SettingsStore {
+        Future<SettingValue> createOrUpdate(String key, String value);
+
+        Future<List<SettingValue>> getByKeys(List<String> keys);
+    }
+
+    record SettingValue(String key, Object value) {
+    }
+
+    private static class RepositorySettingsStore implements SettingsStore {
+
+        @Override
+        public Future<SettingValue> createOrUpdate(String key, String value) {
+            return settingRepository()
+                    .createOrUpdate(key, value)
+                    .map(RepositorySettingsStore::toSettingValue);
+        }
+
+        @Override
+        public Future<List<SettingValue>> getByKeys(List<String> keys) {
+            return settingRepository()
+                    .getByKeys(keys)
+                    .map(records -> records.stream()
+                            .map(RepositorySettingsStore::toSettingValue)
+                            .toList());
+        }
+
+        private static SettingRepository settingRepository() {
+            return DataVerticle.settingRepository;
+        }
+
+        private static SettingValue toSettingValue(SettingRecord record) {
+            return new SettingValue(record.key(), record.value());
+        }
     }
 }
