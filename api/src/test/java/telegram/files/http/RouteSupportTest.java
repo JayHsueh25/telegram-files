@@ -29,7 +29,10 @@ class RouteSupportTest {
 
     @Test
     void apiErrorSerializesMessageToErrorField() {
-        assertEquals("Invalid request", ApiError.of("Invalid request").toJson().getString("error"));
+        JsonObject error = ApiError.of("Invalid request").toJson();
+
+        assertEquals("INTERNAL_ERROR", error.getString("code"));
+        assertEquals("Invalid request", error.getString("error"));
     }
 
     @Test
