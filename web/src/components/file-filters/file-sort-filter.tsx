@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 interface SortFilterProps {
   sort: SortFields | undefined;
@@ -55,7 +54,7 @@ const SortFilter = ({ sort, order, onChange }: SortFilterProps) => {
           onClick={() =>
             onChange(currentSort, currentOrder === "asc" ? "desc" : "asc")
           }
-          className={cn("h-9 w-9")}
+          className="h-9 w-9"
         >
           {currentOrder === "asc" ? (
             <ArrowUpNarrowWide className="h-4 w-4" />

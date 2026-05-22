@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarRange } from "lucide-react";
 import type { FileFilter } from "@/lib/types";
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/popover";
 import { RangeSlider } from "@/components/ui/slider";
 import useIsMobile from "@/hooks/use-is-mobile";
+
+const DEFAULT_SIZE_RANGE: [number, number] = [0, 1000];
 
 interface DateFilterProps {
   dateType: "sent" | "downloaded" | undefined;
@@ -31,6 +33,17 @@ const DateFilter = ({ dateType, dateRange, onChange }: DateFilterProps) => {
     dateRange?.[0] ? new Date(dateRange[0]) : undefined,
     dateRange?.[1] ? new Date(dateRange[1]) : undefined,
   ]);
+
+  useEffect(() => {
+    setLocalType(dateType ?? "sent");
+  }, [dateType]);
+
+  useEffect(() => {
+    setLocalRange([
+      dateRange?.[0] ? new Date(dateRange[0]) : undefined,
+      dateRange?.[1] ? new Date(dateRange[1]) : undefined,
+    ]);
+  }, [dateRange]);
 
   const handleTypeChange = (type: "sent" | "downloaded") => {
     setLocalType(type);
@@ -125,13 +138,20 @@ interface SizeFilterProps {
 }
 
 const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
-  const defaultRange: [number, number] = [0, 1000];
   const [localRange, setLocalRange] = useState<[number, number]>(
-    sizeRange ?? defaultRange,
+    sizeRange ?? DEFAULT_SIZE_RANGE,
   );
   const [localUnit, setLocalUnit] = useState<"KB" | "MB" | "GB">(
     sizeUnit ?? "MB",
   );
+
+  useEffect(() => {
+    setLocalRange(sizeRange ?? DEFAULT_SIZE_RANGE);
+  }, [sizeRange]);
+
+  useEffect(() => {
+    setLocalUnit(sizeUnit ?? "MB");
+  }, [sizeUnit]);
 
   const handleChange = (newValue: number[]) => {
     const range: [number, number] = [newValue[0]!, newValue[1]!];

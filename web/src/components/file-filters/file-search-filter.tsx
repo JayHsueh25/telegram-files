@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import type {
   DownloadStatus,
@@ -24,6 +24,10 @@ const SearchFilter = ({
   onChange: (search: string) => void;
 }) => {
   const [localSearch, setLocalSearch] = useState(search);
+
+  useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
 
   const handleChange = (value: string) => {
     setLocalSearch(value);
@@ -78,7 +82,7 @@ interface FileSearchFilterProps {
   telegramId: string;
   chatId: string;
   value: FileFilter;
-  appliedType?: FileFilter["type"];
+  appliedType: FileFilter["type"];
   onChange: (value: FileFilter) => void;
 }
 
@@ -86,7 +90,7 @@ export function FileSearchFilter({
   telegramId,
   chatId,
   value,
-  appliedType = value.type,
+  appliedType,
   onChange,
 }: FileSearchFilterProps) {
   const handleSearchChange = (search: string) => {
@@ -116,6 +120,7 @@ export function FileSearchFilter({
     <>
       <SearchFilter search={value.search} onChange={handleSearchChange} />
 
+      {/* Applied value preserves type display while drawer edits are unapplied. */}
       <FileTypeFilter
         offline={value.offline}
         telegramId={telegramId}
