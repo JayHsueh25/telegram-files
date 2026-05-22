@@ -1,11 +1,12 @@
 package telegram.files.http;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SettingsRoutesTest {
 
@@ -22,10 +23,11 @@ class SettingsRoutesTest {
 
         new SettingsRoutes().mount(router);
 
-        long settingsRouteCount = router.getRoutes().stream()
-                .filter(route -> route.getPath() != null)
-                .filter(route -> route.getPath().startsWith("/settings"))
-                .count();
-        assertEquals(2, settingsRouteCount);
+        assertTrue(router.getRoutes().stream()
+                .anyMatch(route -> "/settings".equals(route.getPath())
+                        && route.methods().contains(HttpMethod.GET)));
+        assertTrue(router.getRoutes().stream()
+                .anyMatch(route -> "/settings/create".equals(route.getPath())
+                        && route.methods().contains(HttpMethod.POST)));
     }
 }
