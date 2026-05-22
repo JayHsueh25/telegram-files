@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  type DownloadStatus,
-  type FileFilter,
-  type TelegramFile,
-  type Thumbnail,
-  type TransferStatus,
-} from "@/lib/types";
+import { useEffect, useMemo } from "react";
+import { type FileFilter, type TelegramFile } from "@/lib/types";
 import useSWRInfinite from "swr/infinite";
 import { useWebsocket } from "@/hooks/use-websocket";
-import { WebSocketMessageType } from "@/lib/websocket-types";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDebounce } from "use-debounce";
 import { buildFileQueryKey } from "@/hooks/files/use-file-query-key";
+import {
+  mergeRealtimeStatus,
+  useFileRealtimeStatus,
+} from "@/hooks/files/use-file-realtime-status";
 
 const DEFAULT_FILTERS: FileFilter = {
   search: "",
@@ -36,21 +33,7 @@ export function useFiles(
 ) {
   const noAccountSpecified = accountId === "-1" && chatId === "-1";
   const { lastJsonMessage } = useWebsocket();
-  const [latestFilesStatus, setLatestFileStatus] = useState<
-    Record<
-      string,
-      {
-        fileId: number;
-        downloadStatus: DownloadStatus;
-        localPath?: string;
-        completionDate?: number;
-        downloadedSize: number;
-        transferStatus?: TransferStatus;
-        thumbnailFile?: Thumbnail;
-        removed?: boolean;
-      }
-    >
-  >({});
+  const latestFilesStatus = useFileRealtimeStatus(lastJsonMessage);
   const [filters, setFilters, clearFilters] = useLocalStorage<FileFilter>(
     "telegramFileListFilter",
     { ...DEFAULT_FILTERS, offline: noAccountSpecified },
@@ -86,56 +69,6 @@ export function useFiles(
   });
 
   useEffect(() => {
-    if (lastJsonMessage?.type !== WebSocketMessageType.FILE_STATUS) {
-      return;
-    }
-    const data = lastJsonMessage.data as {
-      fileId: number;
-      uniqueId: string;
-      downloadStatus: DownloadStatus;
-      localPath: string;
-      completionDate: number;
-      downloadedSize: number;
-      transferStatus?: TransferStatus;
-      thumbnailFile?: Thumbnail;
-      removed?: boolean;
-    };
-
-    if (data.removed) {
-      setLatestFileStatus((prev) => ({
-        ...prev,
-        [data.uniqueId]: {
-          fileId: data.fileId,
-          downloadStatus: "idle",
-          localPath: undefined,
-          completionDate: undefined,
-          downloadedSize: 0,
-          transferStatus: "idle",
-          removed: true,
-        },
-      }));
-      return;
-    }
-
-    setLatestFileStatus((prev) => ({
-      ...prev,
-      [data.uniqueId]: {
-        fileId: data.fileId,
-        downloadStatus:
-          data.downloadStatus ?? prev[data.uniqueId]?.downloadStatus,
-        localPath: data.localPath ?? prev[data.uniqueId]?.localPath,
-        completionDate:
-          data.completionDate ?? prev[data.uniqueId]?.completionDate,
-        downloadedSize:
-          data.downloadedSize ?? prev[data.uniqueId]?.downloadedSize,
-        transferStatus:
-          data.transferStatus ?? prev[data.uniqueId]?.transferStatus,
-        thumbnailFile: data.thumbnailFile ?? prev[data.uniqueId]?.thumbnailFile,
-      },
-    }));
-  }, [lastJsonMessage]);
-
-  useEffect(() => {
     if (noAccountSpecified && !filters.offline) {
       setFilters((prev) => ({
         ...prev,
@@ -149,30 +82,11 @@ export function useFiles(
     const files: TelegramFile[] = [];
     pages.forEach((page) => {
       page.files.forEach((file) => {
-        if (file.originalDeleted && latestFilesStatus[file.uniqueId]?.removed) {
+        const mergedFile = mergeRealtimeStatus(file, latestFilesStatus);
+        if (!mergedFile) {
           return;
         }
-        files.push({
-          ...file,
-          id: latestFilesStatus[file.uniqueId]?.fileId ?? file.id,
-          downloadStatus:
-            latestFilesStatus[file.uniqueId]?.downloadStatus ??
-            file.downloadStatus,
-          localPath:
-            latestFilesStatus[file.uniqueId]?.localPath ?? file.localPath,
-          completionDate:
-            latestFilesStatus[file.uniqueId]?.completionDate ??
-            file.completionDate,
-          downloadedSize:
-            latestFilesStatus[file.uniqueId]?.downloadedSize ??
-            file.downloadedSize,
-          transferStatus:
-            latestFilesStatus[file.uniqueId]?.transferStatus ??
-            file.transferStatus,
-          thumbnailFile:
-            latestFilesStatus[file.uniqueId]?.thumbnailFile ??
-            file.thumbnailFile,
-        });
+        files.push(mergedFile);
       });
     });
     files.forEach((file, index) => {
