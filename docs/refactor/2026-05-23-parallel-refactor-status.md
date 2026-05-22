@@ -4,7 +4,7 @@
 
 - API test command: `cd api && .\gradlew.bat test`
 - Web check command: `cd web && npm run check`
-- API baseline result: failed before refactor. `compileJava` reports unnamed variable `_` is a Java preview feature and the Gradle build does not pass `--enable-preview`.
+- API baseline result: Lane G updated `api/build.gradle` to pass `--enable-preview` to Java compilation and the test JVM. Re-running `cd api && .\gradlew.bat test` now passes `compileJava` and `compileTestJava`, then fails in the test phase with 36 tests completed, 7 failed, 1 skipped. Remaining failures are not preview compilation errors: `AutoRecordsHolderTest` hits `ExceptionInInitializerError`, `DataVerticleMigrationTest` and `DataVerticleTest` cannot initialize `telegram.files.Config`, `FileDownloadStatusConcurrentTest` cannot initialize `telegram.files.DataVerticle`, and `MessyUtilsTest` cannot find `small_test_file.txt`.
 - Web baseline result: failed before refactor. `eslint` was not found because `node_modules` was not installed in the fresh worktree.
 
 ## Active Lanes
