@@ -11,10 +11,10 @@ export type LatestFileStatus = Record<
   string,
   {
     fileId: number;
-    downloadStatus: DownloadStatus;
+    downloadStatus?: DownloadStatus;
     localPath?: string;
     completionDate?: number;
-    downloadedSize: number;
+    downloadedSize?: number;
     transferStatus?: TransferStatus;
     thumbnailFile?: Thumbnail;
     removed?: boolean;
@@ -23,29 +23,126 @@ export type LatestFileStatus = Record<
 
 type FileStatusMessage = {
   type?: unknown;
-  data?: FileStatusPayload;
+  data: FileStatusPayload;
 };
 
 type FileStatusPayload = {
   fileId: number;
   uniqueId: string;
-  downloadStatus: DownloadStatus;
-  localPath: string;
-  completionDate: number;
-  downloadedSize: number;
+  downloadStatus?: DownloadStatus;
+  localPath?: string;
+  completionDate?: number;
+  downloadedSize?: number;
   transferStatus?: TransferStatus;
   thumbnailFile?: Thumbnail;
   removed?: boolean;
 };
 
+const DOWNLOAD_STATUSES = [
+  "idle",
+  "downloading",
+  "paused",
+  "completed",
+  "error",
+] satisfies DownloadStatus[];
+
+const TRANSFER_STATUSES = [
+  "idle",
+  "transferring",
+  "completed",
+  "error",
+] satisfies TransferStatus[];
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isDownloadStatus(value: unknown): value is DownloadStatus {
+  return (
+    typeof value === "string" &&
+    DOWNLOAD_STATUSES.includes(value as DownloadStatus)
+  );
+}
+
+function isTransferStatus(value: unknown): value is TransferStatus {
+  return (
+    typeof value === "string" &&
+    TRANSFER_STATUSES.includes(value as TransferStatus)
+  );
+}
+
+function isFileStatusPayload(data: unknown): data is FileStatusPayload {
+  if (!isObject(data)) {
+    return false;
+  }
+
+  if (typeof data.uniqueId !== "string" || data.uniqueId.trim() === "") {
+    return false;
+  }
+
+  if (typeof data.fileId !== "number") {
+    return false;
+  }
+
+  if (
+    "downloadStatus" in data &&
+    data.downloadStatus !== undefined &&
+    !isDownloadStatus(data.downloadStatus)
+  ) {
+    return false;
+  }
+
+  if (
+    "downloadedSize" in data &&
+    data.downloadedSize !== undefined &&
+    typeof data.downloadedSize !== "number"
+  ) {
+    return false;
+  }
+
+  if (
+    "localPath" in data &&
+    data.localPath !== undefined &&
+    typeof data.localPath !== "string"
+  ) {
+    return false;
+  }
+
+  if (
+    "completionDate" in data &&
+    data.completionDate !== undefined &&
+    typeof data.completionDate !== "number"
+  ) {
+    return false;
+  }
+
+  if (
+    "removed" in data &&
+    data.removed !== undefined &&
+    typeof data.removed !== "boolean"
+  ) {
+    return false;
+  }
+
+  if (
+    "transferStatus" in data &&
+    data.transferStatus !== undefined &&
+    !isTransferStatus(data.transferStatus)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function isFileStatusMessage(
   lastJsonMessage: unknown,
 ): lastJsonMessage is FileStatusMessage {
   return (
-    typeof lastJsonMessage === "object" &&
-    lastJsonMessage !== null &&
+    isObject(lastJsonMessage) &&
     "type" in lastJsonMessage &&
-    lastJsonMessage.type === WebSocketMessageType.FILE_STATUS
+    lastJsonMessage.type === WebSocketMessageType.FILE_STATUS &&
+    isFileStatusPayload(lastJsonMessage.data)
   );
 }
 
@@ -61,9 +158,6 @@ export function useFileRealtimeStatus(
     }
 
     const data = lastJsonMessage.data;
-    if (!data) {
-      return;
-    }
 
     if (data.removed) {
       setLatestFileStatus((prev) => ({
