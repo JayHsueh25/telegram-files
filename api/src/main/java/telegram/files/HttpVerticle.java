@@ -30,6 +30,7 @@ import io.vertx.ext.web.sstore.LocalSessionStore;
 import io.vertx.ext.web.sstore.SessionStore;
 import org.drinkless.tdlib.TdApi;
 import org.jooq.lambda.function.Function2;
+import telegram.files.http.FileRoutes;
 import telegram.files.http.SettingsRoutes;
 import telegram.files.repository.SettingAutoRecords;
 
@@ -155,21 +156,22 @@ public class HttpVerticle extends AbstractVerticle {
         router.get("/telegram/:telegramId/ping").handler(this::handleTelegramPing);
         router.get("/telegram/:telegramId/test-network").handler(this::handleTelegramTestNetwork);
 
-        router.get("/:telegramId/file/:uniqueId").handler(this::handleFilePreview);
-        router.post("/:telegramId/file/start-download").handler(this::handleFileStartDownload);
-        router.post("/:telegramId/file/cancel-download").handler(this::handleFileCancelDownload);
-        router.post("/:telegramId/file/toggle-pause-download").handler(this::handleFileTogglePauseDownload);
-        router.post("/:telegramId/file/remove").handler(this::handleFileRemove);
-        router.post("/:telegramId/file/update-auto-settings").handler(this::handleAutoSettingsUpdate);
-
-        router.get("/files/count").handler(this::handleFilesCount);
-        router.get("/files").handler(this::handleFiles);
-        router.post("/files/start-download-multiple").handler(this::handleFileStartDownloadMultiple);
-        router.post("/files/cancel-download-multiple").handler(this::handleFileCancelDownloadMultiple);
-        router.post("/files/toggle-pause-download-multiple").handler(this::handleFileTogglePauseDownloadMultiple);
-        router.post("/files/remove-multiple").handler(this::handleFileRemoveMultiple);
-        router.post("/files/update-tags").handler(this::handleFileTagsUpdateMultiple);
-        router.post("/file/:uniqueId/update-tags").handler(this::handleFileTagsUpdate);
+        new FileRoutes(
+                this::handleFilePreview,
+                this::handleFileStartDownload,
+                this::handleFileCancelDownload,
+                this::handleFileTogglePauseDownload,
+                this::handleFileRemove,
+                this::handleAutoSettingsUpdate,
+                this::handleFilesCount,
+                this::handleFiles,
+                this::handleFileStartDownloadMultiple,
+                this::handleFileCancelDownloadMultiple,
+                this::handleFileTogglePauseDownloadMultiple,
+                this::handleFileRemoveMultiple,
+                this::handleFileTagsUpdateMultiple,
+                this::handleFileTagsUpdate
+        ).mount(router);
 
         router.route()
                 .failureHandler(ctx -> {
