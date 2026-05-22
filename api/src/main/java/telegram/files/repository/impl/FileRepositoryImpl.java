@@ -93,7 +93,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                                 SELECT COUNT(*) FROM file_record WHERE %s
                                 """.formatted(query.countClause()))
                         .mapTo(rs -> rs.getLong(0))
-                        .execute(query.params())
+                        .execute(query.countParams())
                         .onFailure(err -> log.error("Failed to get file record count: %s".formatted(err.getMessage())))
                         .map(rs -> rs.size() > 0 ? rs.iterator().next() : 0L)
         ).map(r -> {

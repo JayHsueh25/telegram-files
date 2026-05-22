@@ -35,9 +35,11 @@ public final class FileQuerySqlBuilder {
         appendSortFilter(queryFilter, whereClause);
 
         String countClause = whereClause.toString();
+        Map<String, Object> countParams = new HashMap<>(params);
+        countParams.remove("limit");
         appendPaginationFilter(queryFilter, whereClause, params);
 
-        return new Query(whereClause.toString(), countClause, orderBy(queryFilter), Map.copyOf(params));
+        return new Query(whereClause.toString(), countClause, orderBy(queryFilter), Map.copyOf(params), Map.copyOf(countParams));
     }
 
     private static void appendChatFilter(long chatId, StringBuilder whereClause, Map<String, Object> params) {
@@ -153,7 +155,10 @@ public final class FileQuerySqlBuilder {
         }
 
         params.put("fromMessageId", filter.fromMessageId());
-        if (filter.sort().isCustom()) {
+        if (Objects.equals(filter.sort().column(), "message_id")) {
+            String comparator = filter.sort().isAscending() ? ">" : "<";
+            whereClause.append(" AND message_id ").append(comparator).append(" #{fromMessageId}");
+        } else if (filter.sort().isCustom()) {
             params.put("fromSortField", filter.fromSortField());
             String comparator = filter.sort().isAscending() ? ">" : "<";
             String column = filter.sort().column();
@@ -166,9 +171,14 @@ public final class FileQuerySqlBuilder {
     }
 
     private static String orderBy(FileQueryFilter filter) {
-        return "%s %s".formatted(filter.sort().column(), filter.sort().direction());
+        String orderBy = "%s %s".formatted(filter.sort().column(), filter.sort().direction());
+        if (Objects.equals(filter.sort().column(), "message_id")) {
+            return orderBy;
+        }
+        return orderBy + ", message_id DESC";
     }
 
-    public record Query(String whereClause, String countClause, String orderBy, Map<String, Object> params) {
+    public record Query(String whereClause, String countClause, String orderBy, Map<String, Object> params,
+                        Map<String, Object> countParams) {
     }
 }

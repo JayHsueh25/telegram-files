@@ -26,7 +26,16 @@ class FileQuerySqlBuilderTest {
                 "sort", "size",
                 "order", "asc")));
 
-        assertEquals("size ASC", query.orderBy());
+        assertEquals("size ASC, message_id DESC", query.orderBy());
+    }
+
+    @Test
+    void appendsMessageIdTieBreakerForNonMessageIdCustomSort() {
+        FileQuerySqlBuilder.Query query = FileQuerySqlBuilder.build(0, filter(Map.of(
+                "sort", "date",
+                "order", "desc")));
+
+        assertEquals("date DESC, message_id DESC", query.orderBy());
     }
 
     @Test
@@ -58,6 +67,7 @@ class FileQuerySqlBuilderTest {
 
         assertTrue(query.whereClause().contains("size > #{fromSortField}"));
         assertTrue(query.whereClause().contains("size = #{fromSortField}"));
+        assertTrue(query.whereClause().contains("message_id < #{fromMessageId}"));
         assertFalse(query.whereClause().contains("size > 456"));
         assertFalse(query.whereClause().contains("size = 456"));
         assertEquals(456L, query.params().get("fromSortField"));
@@ -73,9 +83,39 @@ class FileQuerySqlBuilderTest {
 
         assertTrue(query.whereClause().contains("date < #{fromSortField}"));
         assertTrue(query.whereClause().contains("date = #{fromSortField}"));
+        assertTrue(query.whereClause().contains("message_id < #{fromMessageId}"));
         assertFalse(query.whereClause().contains("date < 456"));
         assertFalse(query.whereClause().contains("date = 456"));
         assertEquals(456L, query.params().get("fromSortField"));
+    }
+
+    @Test
+    void messageIdAscendingPaginationUsesOnlyMessageIdCursor() {
+        FileQuerySqlBuilder.Query query = FileQuerySqlBuilder.build(0, filter(Map.of(
+                "sort", "message_id",
+                "order", "asc",
+                "fromMessageId", "123")));
+
+        assertEquals("message_id ASC", query.orderBy());
+        assertTrue(query.whereClause().contains("message_id > #{fromMessageId}"));
+        assertFalse(query.whereClause().contains("fromSortField"));
+        assertFalse(query.params().containsKey("fromSortField"));
+    }
+
+    @Test
+    void countParamsExcludeRowOnlyCursorAndLimitParams() {
+        FileQuerySqlBuilder.Query query = FileQuerySqlBuilder.build(0, filter(Map.of(
+                "tags", "movie",
+                "sort", "size",
+                "order", "asc",
+                "fromMessageId", "123",
+                "fromSortField", "456",
+                "limit", "10")));
+
+        assertEquals("%movie%", query.countParams().get("tag0"));
+        assertFalse(query.countParams().containsKey("limit"));
+        assertFalse(query.countParams().containsKey("fromMessageId"));
+        assertFalse(query.countParams().containsKey("fromSortField"));
     }
 
     private static FileQueryFilter filter(Map<String, String> values) {
