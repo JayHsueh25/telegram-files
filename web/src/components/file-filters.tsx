@@ -1,20 +1,7 @@
 import * as React from "react";
 import { type CSSProperties, useEffect, useState } from "react";
-import { format } from "date-fns";
-import {
-  ArrowDownNarrowWide,
-  ArrowUpNarrowWide,
-  Calendar as CalendarRange,
-  Filter,
-  X,
-} from "lucide-react";
-import {
-  type DownloadStatus,
-  type FileFilter,
-  type FileType,
-  type SortFields,
-  type TransferStatus,
-} from "@/lib/types";
+import { Filter } from "lucide-react";
+import { type FileFilter } from "@/lib/types";
 import { Button } from "./ui/button";
 import {
   Drawer,
@@ -26,340 +13,13 @@ import {
   DrawerTrigger,
 } from "./ui/drawer";
 import { Drawer as DrawerPrimitive } from "vaul";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { RangeSlider } from "@/components/ui/slider";
-import { cn, split } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import FileTypeFilter from "@/components/file-type-filter";
-import FileStatusFilter from "@/components/file-status-filter";
+import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import useIsMobile from "@/hooks/use-is-mobile";
-import { TagsSelector } from "@/components/ui/tags-selector";
-import { useSettings } from "@/hooks/use-settings";
-
-const SearchFilter = ({
-  search,
-  onChange,
-}: {
-  search: string;
-  onChange: (search: string) => void;
-}) => {
-  const [localSearch, setLocalSearch] = useState(search);
-
-  const handleChange = (value: string) => {
-    setLocalSearch(value);
-    onChange(value);
-  };
-
-  return (
-    <div className="space-y-2">
-      <Label>Keyword</Label>
-      <div className="relative">
-        <Input
-          placeholder="Search with name or caption"
-          value={localSearch}
-          onChange={(e) => handleChange(e.target.value)}
-        />
-        {search && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full text-gray-500 transition-all duration-200 hover:scale-110 hover:bg-gray-100 hover:text-gray-800"
-            onClick={() => handleChange("")}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-interface TagsFilterProps {
-  tags: string[];
-  onChange: (tags: string[]) => void;
-}
-
-const TagsFilter = ({ tags, onChange }: TagsFilterProps) => {
-  const { settings } = useSettings();
-
-  return (
-    <div className="space-y-2">
-      <Label>Tags</Label>
-      <TagsSelector
-        value={tags}
-        onChangeAction={onChange}
-        tags={split(",", settings?.tags)}
-      />
-    </div>
-  );
-};
-
-interface DateFilterProps {
-  dateType: "sent" | "downloaded" | undefined;
-  dateRange: [string, string] | undefined;
-  onChange: (type: "sent" | "downloaded", range: [string, string]) => void;
-}
-
-const DateFilter = ({ dateType, dateRange, onChange }: DateFilterProps) => {
-  const [open, setOpen] = useState(false);
-  const isMobile = useIsMobile();
-  const [localType, setLocalType] = useState<"sent" | "downloaded">(
-    dateType ?? "sent",
-  );
-  const [localRange, setLocalRange] = useState<
-    [Date | undefined, Date | undefined]
-  >([
-    dateRange?.[0] ? new Date(dateRange[0]) : undefined,
-    dateRange?.[1] ? new Date(dateRange[1]) : undefined,
-  ]);
-
-  const handleTypeChange = (type: "sent" | "downloaded") => {
-    setLocalType(type);
-  };
-
-  const handleRangeSelect = (range?: {
-    from: Date | undefined;
-    to?: Date | undefined;
-  }) => {
-    if (!range) return;
-
-    setLocalRange([range.from, range.to]);
-    if (range.from && range.to) {
-      onChange(localType, [
-        format(range.from, "yyyy-MM-dd"),
-        format(range.to, "yyyy-MM-dd"),
-      ]);
-    }
-  };
-
-  const getDisplayText = () => {
-    if (!dateRange?.[0] && !dateRange?.[1]) return "Select date range";
-    if (dateRange[0] && dateRange[1]) {
-      return `${format(new Date(dateRange[0]), "LLL dd, y")} - ${format(new Date(dateRange[1]), "LLL dd, y")}`;
-    }
-    return "Date range selected";
-  };
-
-  return (
-    <div className="space-y-2">
-      <Label>Date Filter</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full justify-start text-left font-normal"
-          >
-            <CalendarRange className="mr-2 h-4 w-4" />
-            <span className="flex-1">{getDisplayText()}</span>
-            <span className="ml-2 rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
-              {localType === "downloaded" ? "Download" : "Sent"}
-            </span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-auto p-4"
-          side={isMobile ? undefined : "right"}
-          modal={true}
-        >
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={localType === "sent" ? "default" : "outline"}
-                onClick={() => handleTypeChange("sent")}
-                className="flex-1"
-              >
-                Sent Date
-              </Button>
-              <Button
-                size="sm"
-                variant={localType === "downloaded" ? "default" : "outline"}
-                onClick={() => handleTypeChange("downloaded")}
-                className="flex-1"
-              >
-                Downloaded
-              </Button>
-            </div>
-            <div className="rounded-md border p-2">
-              <Calendar
-                mode="range"
-                selected={{
-                  from: localRange[0],
-                  to: localRange[1],
-                }}
-                onSelect={handleRangeSelect}
-                numberOfMonths={2}
-                defaultMonth={localRange[0] ?? new Date()}
-              />
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-};
-
-interface SizeFilterProps {
-  sizeRange: [number, number] | undefined;
-  sizeUnit: "KB" | "MB" | "GB" | undefined;
-  onChange: (range: [number, number], unit: "KB" | "MB" | "GB") => void;
-}
-
-const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
-  const defaultRange: [number, number] = [0, 1000];
-  const [localRange, setLocalRange] = useState<[number, number]>(
-    sizeRange ?? defaultRange,
-  );
-  const [localUnit, setLocalUnit] = useState<"KB" | "MB" | "GB">(
-    sizeUnit ?? "MB",
-  );
-
-  const handleChange = (newValue: number[]) => {
-    const range: [number, number] = [newValue[0]!, newValue[1]!];
-    setLocalRange(range);
-    onChange(range, localUnit);
-  };
-
-  const handleUnitChange = (unit: "KB" | "MB" | "GB") => {
-    setLocalUnit(unit);
-    onChange(localRange, unit);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label>File Size Range</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
-              {localUnit}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" align="center" modal={true}>
-            <div className="flex flex-col gap-2">
-              <Button
-                size="sm"
-                variant={localUnit === "KB" ? "default" : "outline"}
-                onClick={() => handleUnitChange("KB")}
-              >
-                KB
-              </Button>
-              <Button
-                size="sm"
-                variant={localUnit === "MB" ? "default" : "outline"}
-                onClick={() => handleUnitChange("MB")}
-              >
-                MB
-              </Button>
-              <Button
-                size="sm"
-                variant={localUnit === "GB" ? "default" : "outline"}
-                onClick={() => handleUnitChange("GB")}
-              >
-                GB
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-      <div
-        className="px-2 pt-2"
-        onPointerDown={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <RangeSlider
-          value={localRange}
-          min={0}
-          max={1000}
-          step={1}
-          minStepsBetweenThumbs={1}
-          className="w-full"
-          onValueChange={handleChange}
-        />
-      </div>
-      <div className="flex justify-between text-sm">
-        <span className="text-zinc-500">
-          {localRange[0]} {localUnit}
-        </span>
-        <span className="text-zinc-500">
-          {localRange[1]} {localUnit}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-interface SortFilterProps {
-  sort: SortFields | undefined;
-  order: "asc" | "desc" | undefined;
-  onChange: (sort: SortFields, order: "asc" | "desc") => void;
-}
-
-const SortFilter = ({ sort, order, onChange }: SortFilterProps) => {
-  const currentSort = sort ?? "date";
-  const currentOrder = order ?? "desc";
-
-  const sortOptions = [
-    { value: "date", label: "Sent Date" },
-    { value: "completion_date", label: "Downloaded Date" },
-    { value: "size", label: "File Size" },
-    { value: "reaction_count", label: "Reaction Count" },
-  ] as const;
-
-  return (
-    <div className="space-y-2">
-      <Label>Sort By</Label>
-      <div className="flex gap-2">
-        <Select
-          value={currentSort}
-          onValueChange={(newSort: typeof currentSort) =>
-            onChange(newSort, currentOrder)
-          }
-        >
-          <SelectTrigger className="flex-1">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {sortOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() =>
-            onChange(currentSort, currentOrder === "asc" ? "desc" : "asc")
-          }
-          className={cn("h-9 w-9")}
-        >
-          {currentOrder === "asc" ? (
-            <ArrowUpNarrowWide className="h-4 w-4" />
-          ) : (
-            <ArrowDownNarrowWide className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-};
+import { FileDateSizeFilter } from "@/components/file-filters/file-date-size-filter";
+import { FileSearchFilter } from "@/components/file-filters/file-search-filter";
+import { FileSortFilter } from "@/components/file-filters/file-sort-filter";
 
 interface FileFiltersProps {
   telegramId: string;
@@ -393,47 +53,6 @@ export default function FileFilters({
     if (Array.isArray(value)) return value.length > 0;
     return false;
   }).length;
-
-  const handleSearchChange = (search: string) => {
-    setLocalFilters((prev) => ({ ...prev, search }));
-  };
-
-  const handleTypeChange = (type: FileType | "all") => {
-    setLocalFilters((prev) => ({ ...prev, type }));
-  };
-
-  const handleStatusChange = (
-    downloadStatus?: DownloadStatus,
-    transferStatus?: TransferStatus,
-  ) => {
-    setLocalFilters((prev) => ({
-      ...prev,
-      downloadStatus,
-      transferStatus,
-    }));
-  };
-
-  const handleTagsChange = (tags: string[]) => {
-    setLocalFilters((prev) => ({ ...prev, tags }));
-  };
-
-  const handleDateChange = (
-    dateType: "sent" | "downloaded",
-    dateRange: [string, string],
-  ) => {
-    setLocalFilters((prev) => ({ ...prev, dateType, dateRange }));
-  };
-
-  const handleSizeChange = (
-    sizeRange: [number, number],
-    sizeUnit: "KB" | "MB" | "GB",
-  ) => {
-    setLocalFilters((prev) => ({ ...prev, sizeRange, sizeUnit }));
-  };
-
-  const handleSortChange = (sort: SortFields, order: "asc" | "desc") => {
-    setLocalFilters((prev) => ({ ...prev, sort, order }));
-  };
 
   const handleApply = () => {
     onFiltersChange(localFilters);
@@ -519,65 +138,23 @@ export default function FileFilters({
               </DrawerDescription>
 
               <div className="space-y-4 overflow-y-auto p-0.5">
-                <SearchFilter
-                  search={localFilters.search}
-                  onChange={handleSearchChange}
-                />
-
-                <FileTypeFilter
-                  offline={localFilters.offline}
+                <FileSearchFilter
                   telegramId={telegramId}
                   chatId={chatId}
-                  type={filters.type}
-                  onChange={handleTypeChange}
+                  value={localFilters}
+                  onChange={setLocalFilters}
                 />
-
-                {!localFilters.offline && (
-                  <div className="flex items-center justify-between rounded-md border bg-gray-100/50 px-2 py-3 dark:bg-gray-600/50">
-                    <Label htmlFor="notDownload">Filter Not Download</Label>
-                    <Switch
-                      id="notDownload"
-                      checked={localFilters.downloadStatus === "idle"}
-                      onCheckedChange={(checked) => {
-                        setLocalFilters((prev) => ({
-                          ...prev,
-                          downloadStatus: checked ? "idle" : undefined,
-                        }));
-                      }}
-                      aria-label="Not Download"
-                    />
-                  </div>
-                )}
 
                 {localFilters.offline && (
                   <>
-                    <FileStatusFilter
-                      downloadStatus={localFilters.downloadStatus}
-                      transferStatus={localFilters.transferStatus}
-                      onChange={handleStatusChange}
+                    <FileDateSizeFilter
+                      value={localFilters}
+                      onChange={setLocalFilters}
                     />
 
-                    <TagsFilter
-                      tags={localFilters.tags}
-                      onChange={handleTagsChange}
-                    />
-
-                    <DateFilter
-                      dateType={localFilters.dateType}
-                      dateRange={localFilters.dateRange}
-                      onChange={handleDateChange}
-                    />
-
-                    <SizeFilter
-                      sizeRange={localFilters.sizeRange}
-                      sizeUnit={localFilters.sizeUnit}
-                      onChange={handleSizeChange}
-                    />
-
-                    <SortFilter
-                      sort={localFilters.sort}
-                      order={localFilters.order}
-                      onChange={handleSortChange}
+                    <FileSortFilter
+                      value={localFilters}
+                      onChange={setLocalFilters}
                     />
                   </>
                 )}
