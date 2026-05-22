@@ -25,6 +25,14 @@ public record FileSort(String column, String direction) {
     }
 
     public boolean isCustom() {
-        return !DEFAULT_COLUMN.equals(column);
+        return !isDefaultSort();
+    }
+
+    public boolean isDefaultSort() {
+        return DEFAULT_COLUMN.equals(column) && "DESC".equals(direction);
+    }
+
+    public boolean isAscending() {
+        return "ASC".equals(direction);
     }
 }

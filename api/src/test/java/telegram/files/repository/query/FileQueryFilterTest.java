@@ -2,6 +2,8 @@ package telegram.files.repository.query;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,5 +51,61 @@ class FileQueryFilterTest {
         assertEquals("DESC", FileSort.from("date", "").direction());
         assertEquals("DESC", FileSort.from("date", null).direction());
         assertTrue(FileSort.from("date", "asc").isCustom());
+    }
+
+    @Test
+    void messageIdAscendingIsCustomSort() {
+        FileSort sort = FileSort.from("message_id", "asc");
+
+        assertEquals("ASC", sort.direction());
+        assertTrue(sort.isCustom());
+        assertFalse(sort.isDefaultSort());
+    }
+
+    @Test
+    void messageIdDescendingIsDefaultSort() {
+        FileSort sort = FileSort.from("message_id", null);
+
+        assertEquals("DESC", sort.direction());
+        assertTrue(sort.isDefaultSort());
+        assertFalse(sort.isCustom());
+    }
+
+    @Test
+    void constructorDefensivelyCopiesTags() {
+        List<String> tags = new ArrayList<>(List.of("movie"));
+        FileQueryFilter filter = newFilter(tags, FileSort.from("date", "asc"));
+
+        tags.add("photo");
+
+        assertEquals(List.of("movie"), filter.tags());
+    }
+
+    @Test
+    void constructorNormalizesNullTagsAndSort() {
+        FileQueryFilter filter = newFilter(null, null);
+
+        assertEquals(List.of(), filter.tags());
+        assertEquals("message_id", filter.sort().column());
+        assertEquals("DESC", filter.sort().direction());
+        assertTrue(filter.sort().isDefaultSort());
+    }
+
+    private static FileQueryFilter newFilter(List<String> tags, FileSort sort) {
+        return new FileQueryFilter(
+                null,
+                null,
+                null,
+                null,
+                tags,
+                0L,
+                null,
+                null,
+                null,
+                null,
+                0L,
+                0L,
+                20,
+                sort);
     }
 }

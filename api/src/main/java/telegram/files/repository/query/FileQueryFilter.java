@@ -22,6 +22,11 @@ public record FileQueryFilter(
         int limit,
         FileSort sort) {
 
+    public FileQueryFilter {
+        tags = tags == null ? List.of() : List.copyOf(tags);
+        sort = sort == null ? FileSort.from(null, null) : sort;
+    }
+
     public static FileQueryFilter from(Map<String, String> filter) {
         Map<String, String> values = filter == null ? Map.of() : filter;
         return new FileQueryFilter(
