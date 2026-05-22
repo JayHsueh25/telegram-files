@@ -2,7 +2,6 @@ package telegram.files.repository.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.IterUtil;
-import cn.hutool.core.convert.Convert;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.map.MapUtil;
@@ -21,11 +20,9 @@ import telegram.files.Config;
 import telegram.files.MessyUtils;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.FileRepository;
+import telegram.files.repository.query.FileQueryFilter;
+import telegram.files.repository.query.FileQuerySqlBuilder;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -79,130 +76,24 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
 
     @Override
     public Future<Tuple3<List<FileRecord>, Long, Long>> getFiles(long chatId, Map<String, String> filter) {
-        String search = filter.get("search");
-        String type = filter.get("type");
-        String downloadStatus = filter.get("downloadStatus");
-        String transferStatus = filter.get("transferStatus");
-        List<String> tags = StrUtil.split(filter.get("tags"), ",");
-        long messageThreadId = Convert.toLong(filter.get("messageThreadId"), 0L);
-        String dateType = filter.get("dateType");
-        String dateRange = filter.get("dateRange");
-        String sizeRange = filter.get("sizeRange");
-        String sizeUnit = filter.get("sizeUnit");
-        String sort = filter.get("sort");
-        String order = filter.get("order");
-
-        Long fromMessageId = Convert.toLong(filter.get("fromMessageId"), 0L);
-        int limit = Convert.toInt(filter.get("limit"), 20);
-
-        String whereClause = "type != 'thumbnail'";
-        Map<String, Object> params = new HashMap<>();
-        params.put("limit", limit);
-        if (chatId != 0) {
-            whereClause += " AND chat_id = #{chatId}";
-            params.put("chatId", chatId);
-        }
-        if (StrUtil.isNotBlank(search)) {
-            whereClause += " AND (file_name LIKE #{search} OR caption LIKE #{search})";
-            params.put("search", "%%" + search + "%%");
-        }
-        if (StrUtil.isNotBlank(type) && !Objects.equals(type, "all")) {
-            if (Objects.equals(type, "media")) {
-                whereClause += " AND type IN ('photo', 'video')";
-            } else {
-                whereClause += " AND type = #{type}";
-                params.put("type", type);
-            }
-        }
-        if (StrUtil.isNotBlank(downloadStatus)) {
-            whereClause += " AND download_status = #{downloadStatus}";
-            params.put("downloadStatus", downloadStatus);
-        }
-        if (StrUtil.isNotBlank(transferStatus)) {
-            whereClause += " AND transfer_status = #{transferStatus}";
-            params.put("transferStatus", transferStatus);
-        }
-        if (CollUtil.isNotEmpty(tags)) {
-            String tagClause = tags.stream()
-                    .filter(StrUtil::isNotBlank)
-                    .map(tag -> "tags LIKE '%%" + tag + "%%'")
-                    .collect(Collectors.joining(" OR "));
-            whereClause += " AND (%s)".formatted(tagClause);
-        }
-        if (messageThreadId != 0) {
-            whereClause += " AND message_thread_id = #{messageThreadId}";
-            params.put("messageThreadId", messageThreadId);
-        }
-        if (StrUtil.isNotBlank(dateType) && StrUtil.isNotBlank(dateRange)) {
-            String[] dates = dateRange.split(",");
-            if (dates.length == 2) {
-                long startTime = LocalDate.parse(dates[0], DateTimeFormatter.ISO_DATE)
-                        .atStartOfDay()
-                        .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                long endTime = LocalDate.parse(dates[1], DateTimeFormatter.ISO_DATE)
-                        .atTime(LocalTime.MAX)
-                        .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-                if (Objects.equals(dateType, "sent")) {
-                    whereClause += " AND date >= #{startTime} AND date <= #{endTime}";
-                    startTime = startTime / 1000;
-                    endTime = endTime / 1000;
-                } else {
-                    whereClause += " AND completion_date >= #{startTime} AND completion_date <= #{endTime}";
-                }
-                params.put("startTime", startTime);
-                params.put("endTime", endTime);
-            }
-        }
-        if (StrUtil.isNotBlank(sizeRange) && StrUtil.isNotBlank(sizeUnit)) {
-            String[] sizes = sizeRange.split(",");
-            if (sizes.length == 2) {
-                long minSize = MessyUtils.convertToByte(Convert.toLong(sizes[0]), sizeUnit);
-                long maxSize = MessyUtils.convertToByte(Convert.toLong(sizes[1]), sizeUnit);
-                whereClause += " AND size >= #{minSize} AND size <= #{maxSize}";
-                params.put("minSize", minSize);
-                params.put("maxSize", maxSize);
-            }
-        }
-        String orderBy = "message_id DESC";
-        boolean customSort = StrUtil.isNotBlank(sort) && StrUtil.isNotBlank(order);
-        if (customSort) {
-            orderBy = "%s %s".formatted(sort, order);
-            if (Objects.equals(sort, "completion_date")) {
-                // For completion_date, we need to ensure the date is in milliseconds
-                whereClause += " AND completion_date IS NOT NULL";
-            }
-        }
-        String countClause = whereClause;
-        if (fromMessageId > 0) {
-            params.put("fromMessageId", fromMessageId);
-            if (customSort) {
-                long fromSortField = Convert.toLong(filter.get("fromSortField"));
-                whereClause += " AND (%s %s %s OR (%s = %s AND message_id < #{fromMessageId}))".formatted(sort,
-                        Objects.equals(order, "asc") ? ">" : "<",
-                        fromSortField,
-                        sort,
-                        fromSortField);
-            } else {
-                whereClause += " AND message_id < #{fromMessageId}";
-            }
-        }
-        log.trace("Get files with where: %s params: %s".formatted(whereClause, params));
+        FileQuerySqlBuilder.Query query = FileQuerySqlBuilder.build(chatId, FileQueryFilter.from(filter));
+        log.trace("Get files with where: %s params: %s".formatted(query.whereClause(), query.params()));
         return Future.all(
                 SqlTemplate
                         .forQuery(sqlClient, """
                                 SELECT * FROM file_record WHERE %s ORDER BY %s LIMIT #{limit}
-                                """.formatted(whereClause, orderBy))
+                                """.formatted(query.whereClause(), query.orderBy()))
                         .mapTo(FileRecord.ROW_MAPPER)
-                        .execute(params)
+                        .execute(query.params())
                         .onFailure(err -> log.error("Failed to get file record: %s".formatted(err.getMessage())))
                         .map(IterUtil::toList)
                 ,
                 SqlTemplate
                         .forQuery(sqlClient, """
                                 SELECT COUNT(*) FROM file_record WHERE %s
-                                """.formatted(countClause))
+                                """.formatted(query.countClause()))
                         .mapTo(rs -> rs.getLong(0))
-                        .execute(params)
+                        .execute(query.params())
                         .onFailure(err -> log.error("Failed to get file record count: %s".formatted(err.getMessage())))
                         .map(rs -> rs.size() > 0 ? rs.iterator().next() : 0L)
         ).map(r -> {
