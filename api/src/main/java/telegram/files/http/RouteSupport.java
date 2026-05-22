@@ -25,7 +25,11 @@ public final class RouteSupport {
         if (ctx.body() == null) {
             return JsonObject.of();
         }
-        return ctx.body().asJsonObject();
+        JsonObject jsonBody = ctx.body().asJsonObject();
+        if (jsonBody == null) {
+            return JsonObject.of();
+        }
+        return jsonBody;
     }
 
     public static <T> void json(RoutingContext ctx, Future<T> future) {
